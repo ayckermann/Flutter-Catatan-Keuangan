@@ -6,7 +6,9 @@ const textRegular = TextStyle(fontFamily: 'Poppins-regular');
 const titleAppBar = TextStyle(fontFamily: 'Poppins-bold');
 const textButton = TextStyle(
     fontFamily: 'Poppins-semiBold', color: Colors.white, fontSize: 16);
-const price = TextStyle(
+const priceMasuk = TextStyle(
+    fontFamily: 'Poppins-bold', fontSize: 20, color: pemasukanColor);
+const priceKeluar = TextStyle(
     fontFamily: 'Poppins-bold', fontSize: 20, color: pengeluaranColor);
 const detailTransaksi = TextStyle(
     fontFamily: 'Poppins-bold', fontSize: 26, color: Colors.black);

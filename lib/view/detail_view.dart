@@ -3,7 +3,26 @@ import 'package:catatan_keuangan/styles.dart';
 import 'package:catatan_keuangan/view/update_view.dart';
 
 class DetailPage extends StatelessWidget {
-  const DetailPage({super.key});
+  final String nama;
+  final String tanggal;
+  final String nominal;
+  final bool jenis;
+  final String kategori;
+  final String kategoriGambar;
+  final String deskripsi;
+  final String changes;
+
+  const DetailPage({
+    super.key,
+    required this.nama,
+    required this.tanggal,
+    required this.nominal,
+    required this.jenis,
+    required this.kategori,
+    required this.kategoriGambar,
+    required this.deskripsi,
+    required this.changes,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +46,9 @@ class DetailPage extends StatelessWidget {
             children: [
               Container(
                 margin: EdgeInsets.only(top: 40),
-                child: Text('Transaksi Keluar',
-                    textAlign: TextAlign.center, style: textBold),
+                child: jenis 
+                    ? Text('Transaksi Masuk', textAlign: TextAlign.center, style: textBold)
+                    : Text('Transaksi Keluar', textAlign: TextAlign.center, style: textBold),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
@@ -37,12 +57,13 @@ class DetailPage extends StatelessWidget {
                 ),
               ),
               Container(
-                decoration: BoxDecoration(border: Border.all(width: 1)),
-                margin: EdgeInsets.only(top: 10),
-                padding: EdgeInsets.symmetric(vertical: 15),
-                child: Text('Rp 600.000',
-                    textAlign: TextAlign.center, style: price),
-              ),
+                  decoration: BoxDecoration(border: Border.all(width: 1)),
+                  margin: EdgeInsets.only(top: 10),
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                  child: jenis
+                      ? Text(nominal, textAlign: TextAlign.center, style: priceMasuk)
+                      : Text(nominal,
+                          textAlign: TextAlign.center, style: priceKeluar)),
               Container(
                 margin: EdgeInsets.only(top: 10),
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
@@ -52,7 +73,7 @@ class DetailPage extends StatelessWidget {
                     Column(
                       children: [
                         Text(
-                          'Top Up Steam Wallet Code',
+                          nama,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -74,7 +95,7 @@ class DetailPage extends StatelessWidget {
                               padding: EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                'Top-Up e-Wallet',
+                                kategori,
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: Color.fromRGBO(0, 150, 199, 1)),
@@ -93,7 +114,7 @@ class DetailPage extends StatelessWidget {
                               padding: EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                '13 Oktober 2023',
+                                tanggal,
                                 style: TextStyle(
                                   fontSize: 12,
                                 ),
@@ -104,11 +125,7 @@ class DetailPage extends StatelessWidget {
                         // keterangan transaksi
                       ],
                     ),
-                    Icon(
-                      Icons.account_balance_wallet,
-                      size: 40,
-                      color: Color.fromRGBO(0, 150, 199, 1),
-                    ),
+                    Image.asset(kategoriGambar)
                   ],
                 ),
               ),
@@ -128,7 +145,7 @@ class DetailPage extends StatelessWidget {
                     height: 18,
                   ),
                   Text(
-                    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae nunc eget nunc aliquet ultricies. Sed vitae nunc eget nunc aliquet ultricies.',
+                    deskripsi,
                     textAlign: TextAlign.start,
                     style: TextStyle(
                       fontSize: 14,

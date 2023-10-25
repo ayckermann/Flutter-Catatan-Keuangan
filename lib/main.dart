@@ -4,7 +4,7 @@ import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:catatan_keuangan/view/login_view.dart';
 
 void main() {
-  runApp(LoginView());
+  runApp(MainApp());
 }
 
 class MainApp extends StatelessWidget {
