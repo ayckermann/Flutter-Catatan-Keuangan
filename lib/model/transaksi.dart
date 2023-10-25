@@ -45,7 +45,7 @@ var transaksiList = [
     nama: 'Tagihan Listrik',
     tanggal: '25 September 2023',
     nominal: 'Rp 350.000',
-    jenis: true,
+    jenis: false,
     kategori: 'Tagihan',
     kategoriGambar: 'assets/TagihanCategory.png',
     deskripsi: 'Ini deskripsi',
@@ -69,6 +69,6 @@ var transaksiList = [
     kategori: 'Tiket',
     kategoriGambar: 'assets/TiketCategory.png',
     deskripsi: 'Ini deskripsi',
-    changes: '+Rp1.500.000',
+    changes: '-Rp1.500.000',
   ),
 ];
