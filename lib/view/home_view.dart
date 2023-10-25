@@ -96,14 +96,7 @@ class _HomeViewState extends State<HomeView> {
                     padding: const EdgeInsets.all(10),
                     itemBuilder: (context, index) {
                       return ListItem(
-                        nama: transaksiList[index].nama,
-                        tanggal: transaksiList[index].tanggal,
-                        nominal: transaksiList[index].nominal,
-                        jenis: transaksiList[index].jenis,
-                        kategori: transaksiList[index].kategori,
-                        kategoriGambar: transaksiList[index].kategoriGambar,
-                        deskripsi: transaksiList[index].deskripsi,
-                        changes: transaksiList[index].changes,
+                        transaksi: transaksiList[index],
                       );
                     },
                   ),

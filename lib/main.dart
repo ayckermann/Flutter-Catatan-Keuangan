@@ -14,8 +14,10 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Catatan Keuangan',
-      theme: ThemeData(),
-      home: HomeView(),
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+      ),
+      home: LoginView(),
     );
   }
 }
