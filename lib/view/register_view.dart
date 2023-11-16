@@ -1,6 +1,8 @@
+import 'package:catatan_keuangan/components/input_components.dart';
 import 'package:catatan_keuangan/view/login_view.dart';
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({
@@ -12,12 +14,15 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView> {
+  final _auth = FirebaseAuth.instance;
+
+  bool _isLoading = false;
+
   bool passwordVisible = false;
   bool confirmpasswordVisible = false;
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
@@ -28,163 +33,131 @@ class _RegisterViewState extends State<RegisterView> {
     confirmpasswordVisible = true;
   }
 
+  void toLogin() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return LoginView();
+    }));
+  }
+
+  void register() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final navigator = Navigator.of(context);
+      final email = emailController.text;
+      final password = passwordController.text;
+      final confirmPassword = confirmPasswordController.text;
+
+      if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+        throw ("Please fill all fields");
+      } else {
+        if (password != confirmPassword) {
+          throw ("Password and confirm password must be same");
+        } else if (password.length < 6) {
+          throw ("Password must be at least 6 characters");
+        } else {
+          await _auth.createUserWithEmailAndPassword(
+              email: email, password: password);
+        }
+      }
+      navigator.pop();
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: SafeArea(
-        child: Scaffold(
-          body: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF0077B6),
-                      Color(0xFF3096C7),
-                      Color(0xFFADE8F4)
-                    ]),
-              ),
-              alignment: Alignment.bottomCenter,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    formTitle("CREATE\nACCOUNT"),
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(100),
-                          bottomRight: Radius.circular(100),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 50),
-                      child: Container(
-                        child: Column(
-                          children: [
-                            textFieldForm("Nama", nameController,
-                                TextInputType.name, Icons.person),
-                            textFieldForm("Email", emailController,
-                                TextInputType.emailAddress, Icons.email),
-                            textFieldForm("Phone Number", phoneController,
-                                TextInputType.phone, Icons.phone),
-                            passwordForm("Password", passwordController,
-                                passwordVisible),
-                            passwordForm(
-                                "Confirm Password",
-                                confirmPasswordController,
-                                confirmpasswordVisible),
-                            const SizedBox(height: 30),
-                            ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  backgroundColor: headerColor,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(5))),
-                              child: Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 5),
-                                alignment: Alignment.center,
-                                child: const Text(
-                                  "SIGN UP",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Poppins-bold',
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const Divider(
-                              color: primaryColor,
-                              thickness: 1,
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(context,
-                                    MaterialPageRoute(builder: (context) {
-                                  return LoginView();
-                                }));
-                              },
-                              style: ElevatedButton.styleFrom(
-                                  foregroundColor: headerColor,
-                                  backgroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                      side: const BorderSide(
-                                          color: headerColor, width: 1),
-                                      borderRadius: BorderRadius.circular(5))),
-                              child: Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 5),
-                                alignment: Alignment.center,
-                                child: const Text(
-                                  "LOGIN",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Poppins-bold',
-                                    color: headerColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+    return SafeArea(
+      child: Scaffold(
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [secondaryColor, headerColor, primaryColor]),
                 ),
-              )),
-        ),
-      ),
-      theme: ThemeData(fontFamily: 'Poppins-regular'),
-    );
-  }
-
-  TextField textFieldForm(String label, TextEditingController controller,
-      TextInputType type, IconData icon) {
-    return TextField(
-      autocorrect: false,
-      keyboardType: type,
-      controller: controller,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon),
-        labelText: label,
-      ),
-    );
-  }
-
-  TextField passwordForm(
-      String label, TextEditingController controller, bool visible) {
-    return TextField(
-      autocorrect: false,
-      keyboardType: TextInputType.visiblePassword,
-      obscureText: visible,
-      controller: controller,
-      decoration: InputDecoration(
-        label: Text(label),
-        prefixIcon: const Icon(Icons.lock),
-        suffixIcon: IconButton(
-          icon: Icon(passwordVisible ? Icons.visibility : Icons.visibility_off),
-          onPressed: () {
-            setState(
-              () {
-                passwordVisible = !passwordVisible;
-              },
-            );
-          },
-        ),
-        alignLabelWithHint: false,
-      ),
-      style: const TextStyle(
-        fontSize: 16,
+                alignment: Alignment.bottomCenter,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      formTitle("CREATE\nACCOUNT"),
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.all(20),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(100),
+                            bottomRight: Radius.circular(100),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 50),
+                        child: Container(
+                          child: Column(
+                            children: [
+                              UserField(
+                                  label: 'Nama',
+                                  controller: nameController,
+                                  inputType: TextInputType.name,
+                                  icon: Icons.person),
+                              UserField(
+                                  label: 'Email',
+                                  controller: emailController,
+                                  inputType: TextInputType.emailAddress,
+                                  icon: Icons.email),
+                              PasswordField(
+                                  label: 'Password',
+                                  controller: passwordController,
+                                  passVisible: passwordVisible,
+                                  visPresed: () {
+                                    setState(() {
+                                      passwordVisible = !passwordVisible;
+                                    });
+                                  }),
+                              PasswordField(
+                                  label: 'Confirm Password',
+                                  controller: confirmPasswordController,
+                                  passVisible: confirmpasswordVisible,
+                                  visPresed: () {
+                                    setState(() {
+                                      confirmpasswordVisible =
+                                          !confirmpasswordVisible;
+                                    });
+                                  }),
+                              const SizedBox(height: 30),
+                              ButtonAuth(
+                                  label: "SIGN UP",
+                                  onPressed: register,
+                                  fgColor: Colors.white,
+                                  bgColor: headerColor),
+                              const Divider(
+                                color: primaryColor,
+                                thickness: 1,
+                              ),
+                              ButtonAuth(
+                                  label: "LOGIN",
+                                  onPressed: toLogin,
+                                  fgColor: headerColor,
+                                  bgColor: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
       ),
     );
   }

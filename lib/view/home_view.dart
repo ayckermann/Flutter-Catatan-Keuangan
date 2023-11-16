@@ -1,6 +1,8 @@
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:catatan_keuangan/view/login_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/view/tambah_view.dart';
 import 'package:catatan_keuangan/components/list_item.dart';
@@ -15,6 +17,18 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
+  final _auth = FirebaseAuth.instance;
+
+  void logout() async {
+    final navigator = Navigator.of(context);
+    await _auth.signOut();
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (context) {
+        return LoginView();
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,7 +43,7 @@ class _HomeViewState extends State<HomeView> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Hi, Gosling',
+                        "Hi! ${_auth.currentUser!.email!.substring(0, _auth.currentUser!.email!.indexOf('@'))}",
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 20,
@@ -37,7 +51,9 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          logout();
+                        },
                         icon: Icon(
                           Icons.logout_rounded,
                         ),

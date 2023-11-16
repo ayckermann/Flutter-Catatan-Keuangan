@@ -1,3 +1,4 @@
+import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:flutter/material.dart';
 
 class UserField extends StatelessWidget {
@@ -52,6 +53,49 @@ class PasswordField extends UserField {
         alignLabelWithHint: false,
       ),
       style: TextStyle(fontSize: 16),
+    );
+  }
+}
+
+class ButtonAuth extends StatelessWidget {
+  const ButtonAuth({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    required this.fgColor,
+    required this.bgColor,
+  });
+
+  final String label;
+  final Function onPressed;
+  final Color fgColor;
+  final Color bgColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        onPressed();
+      },
+      style: ElevatedButton.styleFrom(
+          foregroundColor: fgColor,
+          backgroundColor: bgColor,
+          shape: RoundedRectangleBorder(
+              side: BorderSide(color: headerColor, width: 1),
+              borderRadius: BorderRadius.circular(5))),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins-bold',
+          ),
+        ),
+      ),
     );
   }
 }

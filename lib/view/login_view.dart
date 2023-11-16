@@ -2,6 +2,7 @@ import 'package:catatan_keuangan/components/input_components.dart';
 import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:catatan_keuangan/view/register_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 
@@ -15,158 +16,129 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
+  final _auth = FirebaseAuth.instance;
+  bool _isLoading = false;
+
   bool passwordVisible = false;
 
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   void initState() {
     super.initState();
     passwordVisible = true;
   }
 
-  bool auth() {
-    bool x = false;
+  void toRegister() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return RegisterView();
+    }));
+  }
 
-    listAkun.forEach((akun) {
-      if (emailController.text == akun.email &&
-          passwordController.text == akun.password) {
-        x = true;
-      }
+  void login() async {
+    setState(() {
+      _isLoading = true;
     });
 
-    return x;
-    // return true;
+    try {
+      final navigator = Navigator.of(context);
+      final email = _emailController.text;
+      final password = _passwordController.text;
+      if (email.isEmpty || password.isEmpty) {
+        throw ("Please fill all fields");
+      } else {
+        await _auth.signInWithEmailAndPassword(
+            email: email, password: password);
+
+        navigator.pushReplacement(
+          MaterialPageRoute(builder: (context) {
+            return HomeView();
+          }),
+        );
+      }
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+    ;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [secondaryColor, headerColor, primaryColor]),
-          ),
-          alignment: Alignment.bottomCenter,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                formTitle("CREATE\nACCOUNT"),
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(50),
-                      bottomRight: Radius.circular(50),
-                    ),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 30),
-                  child: Container(
-                    child: Column(
-                      children: [
-                        UserField(
-                            label: 'Email',
-                            controller: emailController,
-                            inputType: TextInputType.emailAddress,
-                            icon: Icons.email),
-                        PasswordField(
-                            label: 'Password',
-                            controller: passwordController,
-                            passVisible: passwordVisible,
-                            visPresed: () {
-                              setState(() {
-                                passwordVisible = !passwordVisible;
-                              });
-                            }),
-                        SizedBox(height: 30),
-                        ElevatedButton(
-                          onPressed: () {
-                            if (auth()) {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => HomeView()));
-                            } else {
-                              showDialog(
-                                  context: context,
-                                  builder: (BuildContext) {
-                                    return AlertDialog(
-                                      title: Text('Login Gagal'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                          child: Text('OK'),
-                                        ),
-                                      ],
-                                    );
-                                  });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: headerColor,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(5))),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            alignment: Alignment.center,
-                            child: const Text(
-                              "LOGIN",
-                              style:
-                                  TextStyle(fontSize: 20, fontFamily: famBold),
-                            ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [secondaryColor, headerColor, primaryColor]),
+                ),
+                alignment: Alignment.bottomCenter,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      formTitle("WELCOME\nBACK"),
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.all(20),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(50),
+                            bottomRight: Radius.circular(50),
                           ),
                         ),
-                        const Divider(
-                          color: primaryColor,
-                          thickness: 1,
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(context,
-                                MaterialPageRoute(builder: (context) {
-                              return RegisterView();
-                            }));
-                          },
-                          style: ElevatedButton.styleFrom(
-                              foregroundColor: headerColor,
-                              backgroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  side:
-                                      BorderSide(color: headerColor, width: 1),
-                                  borderRadius: BorderRadius.circular(5))),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            alignment: Alignment.center,
-                            child: const Text(
-                              "SIGN UP",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontFamily: famBold,
-                                color: headerColor,
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 30, vertical: 30),
+                        child: Container(
+                          child: Column(
+                            children: [
+                              UserField(
+                                  label: 'Email',
+                                  controller: _emailController,
+                                  inputType: TextInputType.emailAddress,
+                                  icon: Icons.email),
+                              PasswordField(
+                                  label: 'Password',
+                                  controller: _passwordController,
+                                  passVisible: passwordVisible,
+                                  visPresed: () {
+                                    setState(() {
+                                      passwordVisible = !passwordVisible;
+                                    });
+                                  }),
+                              SizedBox(height: 30),
+                              ButtonAuth(
+                                  label: "LOGIN",
+                                  onPressed: login,
+                                  fgColor: Colors.white,
+                                  bgColor: headerColor),
+                              const Divider(
+                                color: primaryColor,
+                                thickness: 1,
                               ),
-                            ),
+                              ButtonAuth(
+                                  label: "SIGN UP",
+                                  onPressed: toRegister,
+                                  fgColor: headerColor,
+                                  bgColor: Colors.white),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
