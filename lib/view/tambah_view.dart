@@ -1,5 +1,7 @@
+import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:catatan_keuangan/styles.dart';
+import 'package:catatan_keuangan/tools/styles.dart';
 
 class TambahPage extends StatelessWidget {
   const TambahPage({super.key});
@@ -44,16 +46,17 @@ class TambahPage extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 20),
-                  //pilih tanggal
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Tanggal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.calendar_today),
-                    ),
-                  ),
+                  DateTimePicker(
+                      decoration: InputDecoration(
+                        hintText: 'Tanggal',
+                        hintStyle: textRegular,
+                        border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10))),
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now()),
                   SizedBox(height: 20),
                   TextField(
                     decoration: InputDecoration(
@@ -67,28 +70,39 @@ class TambahPage extends StatelessWidget {
                   SizedBox(height: 20),
                   //dropdown katagori
                   DropdownButtonFormField(
-                    decoration: InputDecoration(
+                      decoration: const InputDecoration(
+                        hintText: 'Jenis',
+                        hintStyle: textRegular,
+                        border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10))),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          child: Text('Pengeluaran', style: textRegular),
+                          value: true,
+                        ),
+                        DropdownMenuItem(
+                          child: Text('Pemasukan', style: textRegular),
+                          value: false,
+                        )
+                      ],
+                      onChanged: (value) {}),
+                  SizedBox(height: 20),
+                  //dropdown katagori
+                  DropdownButtonFormField(
+                    decoration: const InputDecoration(
                       hintText: 'Kategori',
                       hintStyle: textRegular,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10))),
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        child: Text(
-                          'Pemasukan',
-                          style: textRegular,
-                        ),
-                        value: 'Pemasukan',
-                      ),
-                      DropdownMenuItem(
-                        child: Text(
-                          'Pengeluaran',
-                          style: textRegular,
-                        ),
-                        value: 'Pengeluaran',
-                      ),
-                    ],
+                    items: listKategori.map((data) {
+                      return DropdownMenuItem(
+                        value: data,
+                        child: Text(data.nama, style: textRegular),
+                      );
+                    }).toList(),
                     onChanged: (value) {},
                   ),
                   SizedBox(height: 20),
@@ -122,10 +136,7 @@ class TambahPage extends StatelessWidget {
                     ),
                     child: TextButton(
                       onPressed: () {},
-                      child: Text(
-                        'Tambah Transaksi',
-                        style: textButton,
-                      ),
+                      child: Text('Tambah Transaksi', style: textButton),
                     ),
                   ),
                 ],

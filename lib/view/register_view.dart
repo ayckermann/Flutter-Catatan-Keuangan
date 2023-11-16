@@ -1,5 +1,6 @@
+import 'package:catatan_keuangan/view/login_view.dart';
 import 'package:flutter/material.dart';
-import '../styles.dart';
+import '../tools/styles.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({
@@ -44,93 +45,102 @@ class _RegisterViewState extends State<RegisterView> {
                     ]),
               ),
               alignment: Alignment.bottomCenter,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  formTitle("CREATE\nACCOUNT"),
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(100),
-                        bottomRight: Radius.circular(100),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    formTitle("CREATE\nACCOUNT"),
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(100),
+                          bottomRight: Radius.circular(100),
+                        ),
                       ),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 50),
-                    child: Container(
-                      child: Column(
-                        children: [
-                          textFieldForm("Nama", nameController,
-                              TextInputType.name, Icons.person),
-                          textFieldForm("Email", emailController,
-                              TextInputType.emailAddress, Icons.email),
-                          textFieldForm("Phone Number", phoneController,
-                              TextInputType.phone, Icons.phone),
-                          passwordForm(
-                              "Password", passwordController, passwordVisible),
-                          passwordForm(
-                              "Confirm Password",
-                              confirmPasswordController,
-                              confirmpasswordVisible),
-                          const SizedBox(height: 30),
-                          ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: headerColor,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(5))),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 5),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                "SIGN UP",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins-bold',
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 50),
+                      child: Container(
+                        child: Column(
+                          children: [
+                            textFieldForm("Nama", nameController,
+                                TextInputType.name, Icons.person),
+                            textFieldForm("Email", emailController,
+                                TextInputType.emailAddress, Icons.email),
+                            textFieldForm("Phone Number", phoneController,
+                                TextInputType.phone, Icons.phone),
+                            passwordForm("Password", passwordController,
+                                passwordVisible),
+                            passwordForm(
+                                "Confirm Password",
+                                confirmPasswordController,
+                                confirmpasswordVisible),
+                            const SizedBox(height: 30),
+                            ElevatedButton(
+                              onPressed: () {},
+                              style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: headerColor,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5))),
+                              child: Container(
+                                width: double.infinity,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 5),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  "SIGN UP",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins-bold',
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const Divider(
-                            color: primaryColor,
-                            thickness: 1,
-                          ),
-                          ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                                foregroundColor: headerColor,
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    side: const BorderSide(
-                                        color: headerColor, width: 1),
-                                    borderRadius: BorderRadius.circular(5))),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 5),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                "LOGIN",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Poppins-bold',
-                                  color: headerColor,
+                            const Divider(
+                              color: primaryColor,
+                              thickness: 1,
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(context,
+                                    MaterialPageRoute(builder: (context) {
+                                  return LoginView();
+                                }));
+                              },
+                              style: ElevatedButton.styleFrom(
+                                  foregroundColor: headerColor,
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      side: const BorderSide(
+                                          color: headerColor, width: 1),
+                                      borderRadius: BorderRadius.circular(5))),
+                              child: Container(
+                                width: double.infinity,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 5),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  "LOGIN",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins-bold',
+                                    color: headerColor,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               )),
         ),
       ),

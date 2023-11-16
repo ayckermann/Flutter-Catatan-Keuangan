@@ -1,6 +1,7 @@
 import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:catatan_keuangan/tools/formater.dart';
 import 'package:flutter/material.dart';
-import 'package:catatan_keuangan/styles.dart';
+import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:catatan_keuangan/view/update_view.dart';
 
 class DetailPage extends StatelessWidget {
@@ -15,10 +16,7 @@ class DetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-            title: Text(
-              'Detail Transaksi',
-              style: titleAppBar,
-            ),
+            title: Text('Detail Transaksi', style: titleAppBar),
             centerTitle: true,
             backgroundColor: headerColor,
             leading: IconButton(
@@ -46,14 +44,16 @@ class DetailPage extends StatelessWidget {
                 ),
               ),
               Container(
-                  decoration: BoxDecoration(border: Border.all(width: 1)),
+                  decoration: const BoxDecoration(
+                    border: Border.symmetric(
+                        horizontal:
+                            BorderSide(width: 10, color: secondaryColor)),
+                  ),
                   margin: EdgeInsets.only(top: 10),
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  child: transaksi.jenis
-                      ? Text(transaksi.nominal,
-                          textAlign: TextAlign.center, style: priceMasuk)
-                      : Text(transaksi.nominal,
-                          textAlign: TextAlign.center, style: priceKeluar)),
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Text(numFormat.format(transaksi.nominal),
+                      textAlign: TextAlign.center,
+                      style: transaksi.jenis ? priceMasuk : priceKeluar)),
               Container(
                 margin: EdgeInsets.only(top: 10),
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 10),
@@ -65,35 +65,27 @@ class DetailPage extends StatelessWidget {
                         Text(
                           transaksi.nama,
                           style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(
-                          height: 18,
-                        ),
+                        SizedBox(height: 18),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             Container(
                               decoration: BoxDecoration(
-                                border: Border.all(
-                                    width: 1,
-                                    color: Color.fromRGBO(0, 150, 199, 1)),
-                                borderRadius: BorderRadius.circular(30),
+                                border:
+                                    Border.all(width: 1, color: secondaryColor),
+                                borderRadius: BorderRadius.circular(5),
                               ),
                               padding: EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                transaksi.kategori,
+                                transaksi.kategori.nama,
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color.fromRGBO(0, 150, 199, 1)),
+                                    fontSize: 12, color: secondaryColor),
                               ),
                             ),
-                            SizedBox(
-                              width: 10,
-                            ),
+                            SizedBox(width: 10),
                             Container(
                               decoration: BoxDecoration(
                                 border: Border.all(
@@ -104,10 +96,8 @@ class DetailPage extends StatelessWidget {
                               padding: EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                transaksi.tanggal,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                ),
+                                dateFormat.format(transaksi.tanggal),
+                                style: TextStyle(fontSize: 12),
                               ),
                             ),
                           ],
@@ -115,7 +105,7 @@ class DetailPage extends StatelessWidget {
                         // keterangan transaksi
                       ],
                     ),
-                    Image.asset(transaksi.kategoriGambar)
+                    Image.asset('assets/${transaksi.kategori.gambar}')
                   ],
                 ),
               ),
@@ -131,15 +121,11 @@ class DetailPage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(
-                    height: 18,
-                  ),
+                  SizedBox(height: 18),
                   Text(
                     transaksi.deskripsi,
                     textAlign: TextAlign.start,
-                    style: TextStyle(
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontSize: 14),
                   ),
                 ]),
               ),

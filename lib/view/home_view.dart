@@ -1,8 +1,9 @@
 import 'package:catatan_keuangan/model/transaksi.dart';
-import 'package:catatan_keuangan/styles.dart';
+import 'package:catatan_keuangan/tools/styles.dart';
+import 'package:catatan_keuangan/tools/formater.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/view/tambah_view.dart';
-import 'package:catatan_keuangan/list_item.dart';
+import 'package:catatan_keuangan/components/list_item.dart';
 
 class HomeView extends StatefulWidget {
   HomeView({
@@ -24,7 +25,7 @@ class _HomeViewState extends State<HomeView> {
             child: Column(
               children: [
                 Container(
-                  child: Row(
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Text(
@@ -38,46 +39,36 @@ class _HomeViewState extends State<HomeView> {
                     ],
                   ),
                 ),
-                const SizedBox(
-                  height: 30,
-                ),
+                const SizedBox(height: 30),
                 Container(
-                  child: Row(
-                    children: [
-                      Text(
-                        'Catatan Keuangan',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 20,
-                          fontFamily: 'Poppins-bold',
-                        ),
-                      ),
-                    ],
+                  alignment: Alignment.topLeft,
+                  child: const Text(
+                    'Catatan Keuangan',
+                    style: TextStyle(
+                        color: headerColor, fontSize: 20, fontFamily: famBold),
                   ),
                 ),
-                const SizedBox(
-                  height: 15,
-                ),
+                const SizedBox(height: 15),
                 Container(
                   padding: EdgeInsets.all(20),
                   height: 170,
                   width: double.infinity,
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      color: primaryColor),
+                      color: headerColor),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Saldo Anda saat ini',
+                        'Saldo anda saat ini',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
-                          fontFamily: 'Poppins-semiBold',
+                          fontFamily: famSemi,
                         ),
                       ),
                       Text(
-                        'Rp 15.000.000',
+                        numFormat.format(15000000),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 35,
@@ -87,9 +78,7 @@ class _HomeViewState extends State<HomeView> {
                     ],
                   ),
                 ),
-                const SizedBox(
-                  height: 25,
-                ),
+                const SizedBox(height: 25),
                 Expanded(
                   child: ListView.builder(
                     itemCount: transaksiList.length,

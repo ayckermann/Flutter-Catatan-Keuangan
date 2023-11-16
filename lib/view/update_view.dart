@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:catatan_keuangan/styles.dart';
+import 'package:catatan_keuangan/tools/styles.dart';
 
 class UpdatePage extends StatelessWidget {
   const UpdatePage({super.key});

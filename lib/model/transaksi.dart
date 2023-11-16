@@ -1,12 +1,27 @@
+import 'package:flutter/material.dart';
+
+class Kategori {
+  String nama;
+  String gambar;
+
+  Kategori(this.nama, this.gambar);
+}
+
+final listKategori = [
+  Kategori('Transfer Keluar', 'TransferKeluarCategory.png'),
+  Kategori('Transfer Masuk', 'TransferMasukCategory.png'),
+  Kategori('Tiket', 'TiketCategory.png'),
+  Kategori('TopUp', 'TopUpCategory.png'),
+  Kategori('Tagihan', 'TagihanCategory.png'),
+];
+
 class Transaksi {
   final String nama;
-  final String tanggal;
-  final String nominal;
+  final DateTime tanggal;
+  final int nominal;
   final bool jenis; // true = +   false = -
-  final String kategori;
-  final String kategoriGambar;
+  final Kategori kategori;
   final String deskripsi;
-  final String changes;
 
   Transaksi({
     required this.nama,
@@ -14,61 +29,49 @@ class Transaksi {
     required this.nominal,
     required this.jenis,
     required this.kategori,
-    required this.kategoriGambar,
-    required this.deskripsi,
-    required this.changes,
+    this.deskripsi = '',
   });
 }
 
 var transaksiList = [
   Transaksi(
     nama: 'Top Up Steam Wallet Card',
-    tanggal: '13 Oktober 2023',
-    nominal: 'Rp 600.000',
+    tanggal: DateTime(2023, 10, 13),
+    nominal: 600000,
     jenis: false,
-    kategori: 'Top Up e-wallet',
-    kategoriGambar: 'assets/TopUpCategory.png',
+    kategori: listKategori[3],
     deskripsi: 'Top Up SWC 600K',
-    changes: '-Rp600.000',
   ),
   Transaksi(
     nama: 'Transfer BCA',
-    tanggal: '5 Oktober 2023',
-    nominal: 'Rp 1.000.000',
+    tanggal: DateTime(2023, 10, 5),
+    nominal: 1000000,
     jenis: true,
-    kategori: 'Transfer (Masuk)',
-    kategoriGambar: 'assets/TransferMasukCategory.png',
+    kategori: listKategori[1],
     deskripsi: 'Ini deskripsi',
-    changes: '+Rp1.000.000',
   ),
   Transaksi(
     nama: 'Tagihan Listrik',
-    tanggal: '25 September 2023',
-    nominal: 'Rp 350.000',
+    tanggal: DateTime(2023, 9, 5),
+    nominal: 350000,
     jenis: false,
-    kategori: 'Tagihan',
-    kategoriGambar: 'assets/TagihanCategory.png',
+    kategori: listKategori[4],
     deskripsi: 'Ini deskripsi',
-    changes: '-Rp350.000',
   ),
   Transaksi(
     nama: 'Transfer Mandiri',
-    tanggal: '10 Juli 2023',
-    nominal: 'Rp 500.000',
+    tanggal: DateTime(2023, 7, 19),
+    nominal: 500000,
     jenis: false,
-    kategori: 'Transfer (Keluar)',
-    kategoriGambar: 'assets/TransferKeluarCategory.png',
+    kategori: listKategori[0],
     deskripsi: 'Ini deskripsi',
-    changes: '-Rp500.000',
   ),
   Transaksi(
     nama: 'Tiket Pesawat',
-    tanggal: '15 April 2023',
-    nominal: 'Rp 1.500.000',
+    tanggal: DateTime(2023, 4, 15),
+    nominal: 1500000,
     jenis: false,
-    kategori: 'Tiket',
-    kategoriGambar: 'assets/TiketCategory.png',
+    kategori: listKategori[2],
     deskripsi: 'Ini deskripsi',
-    changes: '-Rp1.500.000',
   ),
 ];
