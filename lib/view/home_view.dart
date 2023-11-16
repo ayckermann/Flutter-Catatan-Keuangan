@@ -25,8 +25,8 @@ class _HomeViewState extends State<HomeView> {
             child: Column(
               children: [
                 Container(
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Hi, Gosling',
@@ -35,7 +35,13 @@ class _HomeViewState extends State<HomeView> {
                           fontSize: 20,
                           fontFamily: 'Poppins-bold',
                         ),
-                      )
+                      ),
+                      IconButton(
+                        onPressed: () {},
+                        icon: Icon(
+                          Icons.logout_rounded,
+                        ),
+                      ),
                     ],
                   ),
                 ),
