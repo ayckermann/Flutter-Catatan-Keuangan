@@ -3,6 +3,7 @@ import 'package:catatan_keuangan/view/login_view.dart';
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({
@@ -44,7 +45,12 @@ class _RegisterViewState extends State<RegisterView> {
       _isLoading = true;
     });
     try {
+      CollectionReference akunCollection =
+          FirebaseFirestore.instance.collection('akun');
+
       final navigator = Navigator.of(context);
+
+      final nama = nameController.text;
       final email = emailController.text;
       final password = passwordController.text;
       final confirmPassword = confirmPasswordController.text;
@@ -59,6 +65,14 @@ class _RegisterViewState extends State<RegisterView> {
         } else {
           await _auth.createUserWithEmailAndPassword(
               email: email, password: password);
+
+          await akunCollection.add({
+            'nama': nama,
+            'email': email,
+            'uid': _auth.currentUser!.uid,
+            'saldo': 0,
+            // ignore: invalid_return_type_for_catch_error
+          }).catchError((error) => print("Failed to add user: $error"));
         }
       }
       navigator.pop();
@@ -96,14 +110,14 @@ class _RegisterViewState extends State<RegisterView> {
                         width: double.infinity,
                         margin: const EdgeInsets.all(20),
                         decoration: const BoxDecoration(
-                          color: Color(0xFFFFFFFF),
+                          color: Colors.white,
                           borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(100),
-                            bottomRight: Radius.circular(100),
+                            topLeft: Radius.circular(50),
+                            bottomRight: Radius.circular(50),
                           ),
                         ),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 50),
+                            horizontal: 30, vertical: 30),
                         child: Container(
                           child: Column(
                             children: [

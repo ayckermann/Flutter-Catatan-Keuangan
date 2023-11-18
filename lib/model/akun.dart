@@ -1,22 +1,13 @@
 class Akun {
+  final String uid;
   final String nama;
+  final int saldo;
   final String email;
-  final String phone;
-  final String password;
 
   Akun({
+    required this.uid,
     required this.nama,
+    required this.saldo,
     required this.email,
-    required this.phone,
-    required this.password,
   });
 }
-
-List<Akun> listAkun = [
-  Akun(
-    nama: 'asd',
-    email: 'asd@asd.com',
-    phone: '091',
-    password: 'asd',
-  ),
-];

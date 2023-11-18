@@ -10,12 +10,16 @@ dependencies:
   flutter:
     sdk: flutter
   date_time_picker: ^2.1.0
+  image_picker: ^1.0.4
   intl: ^0.17.0
   # intl: ^0.18.1 not supported with date_time_picker: ^2.1.0
-
+  logger: ^2.0.2+1
+  
   # firebase
   firebase_core: ^2.22.0
   firebase_auth: ^4.14.0
+  cloud_firestore: ^4.13.1
+  firebase_storage: ^11.5.1
   
 
 dev_dependencies:

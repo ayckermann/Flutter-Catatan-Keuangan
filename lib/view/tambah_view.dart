@@ -1,13 +1,83 @@
-import 'package:catatan_keuangan/model/transaksi.dart';
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
-class TambahPage extends StatelessWidget {
+class TambahPage extends StatefulWidget {
   const TambahPage({super.key});
 
   @override
+  State<TambahPage> createState() => _TambahPageState();
+}
+
+class _TambahPageState extends State<TambahPage> {
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
+
+  TextEditingController namaController = TextEditingController();
+  TextEditingController tanggalController = TextEditingController();
+  TextEditingController nominalController = TextEditingController();
+  bool jenisController = true;
+  String kategoriController = '';
+  TextEditingController deskripsiController = TextEditingController();
+  TextEditingController fileController = TextEditingController();
+  String imageUrl = '';
+
+  Future<void> uploadImage(XFile? file) async {
+    if (file == null) return;
+
+    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
+
+    Reference dirUpload =
+        _storage.ref().child('upload/${_auth.currentUser!.uid}');
+    Reference storedDir = dirUpload.child(uniqueFilename);
+
+    try {
+      await storedDir.putFile(File(file.path));
+
+      imageUrl = await storedDir.getDownloadURL();
+    } catch (e) {
+      print(e);
+    }
+
+    setState(() {
+      fileController.text = file.name;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    CollectionReference transaksiCollection =
+        _firestore.collection('transaksi');
+
+    Future<void> addTransaksi() {
+      // Parse the string to DateTime
+      DateTime parsedDateTime =
+          DateFormat('yyyy-MM-DD').parse(tanggalController.text);
+
+      // Convert DateTime to Firestore Timestamp
+      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
+
+      return transaksiCollection.add({
+        'nama': namaController.text,
+        'tanggal': timestamp,
+        'nominal': int.parse(nominalController.text),
+        'jenis': jenisController,
+        'kategori': kategoriController,
+        'deskripsi': deskripsiController.text,
+        'gambar': imageUrl,
+        'uid': _auth.currentUser!.uid,
+        // ignore: invalid_return_type_for_catch_error
+      }).catchError((error) => print("Failed to add user: $error"));
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
@@ -17,7 +87,7 @@ class TambahPage extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-        title: Text(
+        title: const Text(
           'Tambah Transaksi',
           style: titleAppBar,
         ),
@@ -28,38 +98,44 @@ class TambahPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
           child: Column(
             children: [
-              Text(
+              const Text(
                 'Transaksi Baru',
                 style: textBold,
               ),
-              SizedBox(
+              const SizedBox(
                 height: 30,
               ),
               Column(
                 children: [
                   TextField(
-                    decoration: InputDecoration(
+                    controller: namaController,
+                    decoration: const InputDecoration(
                       hintText: 'Nama Transaksi',
                       hintStyle: textRegular,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10))),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   DateTimePicker(
-                      decoration: InputDecoration(
-                        hintText: 'Tanggal',
-                        hintStyle: textRegular,
-                        border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10))),
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now()),
-                  SizedBox(height: 20),
+                    controller: tanggalController,
+                    decoration: const InputDecoration(
+                      hintText: 'Tanggal',
+                      hintStyle: textRegular,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                    dateMask: 'MMMM dd, yyyy',
+                  ),
+
+                  const SizedBox(height: 20),
                   TextField(
-                    decoration: InputDecoration(
+                    controller: nominalController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
                       hintText: 'Nominal',
                       hintStyle: textRegular,
                       border: OutlineInputBorder(
@@ -67,27 +143,28 @@ class TambahPage extends StatelessWidget {
                       suffixIcon: Icon(Icons.attach_money),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   //dropdown katagori
                   DropdownButtonFormField(
-                      decoration: const InputDecoration(
-                        hintText: 'Jenis',
-                        hintStyle: textRegular,
-                        border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10))),
+                    decoration: const InputDecoration(
+                      hintText: 'Jenis',
+                      hintStyle: textRegular,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: true,
+                        child: Text('Pengeluaran', style: textRegular),
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                          child: Text('Pengeluaran', style: textRegular),
-                          value: true,
-                        ),
-                        DropdownMenuItem(
-                          child: Text('Pemasukan', style: textRegular),
-                          value: false,
-                        )
-                      ],
-                      onChanged: (value) {}),
+                      DropdownMenuItem(
+                        value: false,
+                        child: Text('Pemasukan', style: textRegular),
+                      )
+                    ],
+                    onChanged: (value) =>
+                        setState(() => jenisController = value as bool),
+                  ),
                   SizedBox(height: 20),
                   //dropdown katagori
                   DropdownButtonFormField(
@@ -97,45 +174,71 @@ class TambahPage extends StatelessWidget {
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10))),
                     ),
-                    items: listKategori.map((data) {
-                      return DropdownMenuItem(
-                        value: data,
-                        child: Text(data.nama, style: textRegular),
-                      );
-                    }).toList(),
-                    onChanged: (value) {},
+                    items: const [
+                      DropdownMenuItem(
+                        value: "Transfer Keluar",
+                        child: Text('Transfer Keluar', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "Transfer Masuk",
+                        child: Text('Transfer Masuk', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "Tiket",
+                        child: Text('Tiket', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "TopUp",
+                        child: Text('TopUp', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "Tagihan",
+                        child: Text('Tagihan', style: textRegular),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => kategoriController = value as String),
                   ),
                   SizedBox(height: 20),
                   //masukkan file
                   TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Masukkan File',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.attach_file),
-                    ),
+                    decoration: const InputDecoration(
+                        hintText: 'Masukkan File',
+                        hintStyle: textRegular,
+                        suffixIcon: Icon(Icons.attach_file),
+                        border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.all(Radius.circular(10)))),
+                    controller: fileController,
+                    readOnly: true,
+                    onTap: () {
+                      uploadDialog(context);
+                    },
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   TextField(
+                    controller: deskripsiController,
                     maxLines: 5,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Keterangan',
                       hintStyle: textRegular,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10))),
                     ),
                   ),
-                  SizedBox(height: 50),
+                  const SizedBox(height: 50),
                   Container(
                     width: double.infinity,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Color.fromRGBO(0, 150, 199, 1),
+                      color: const Color.fromRGBO(0, 150, 199, 1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        addTransaksi();
+                        Navigator.pop(context);
+                      },
                       child: Text('Tambah Transaksi', style: textButton),
                     ),
                   ),
@@ -146,5 +249,36 @@ class TambahPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<dynamic> uploadDialog(BuildContext context) {
+    ImagePicker picker = ImagePicker();
+    XFile? file;
+
+    return showDialog(
+        context: context,
+        builder: (BuildContext) {
+          return AlertDialog(
+            title: Text('Pilih Aksi'),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  file = await picker.pickImage(source: ImageSource.camera);
+                  uploadImage(file);
+                  Navigator.of(context).pop();
+                },
+                child: Text('Camera'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  file = await picker.pickImage(source: ImageSource.gallery);
+                  uploadImage(file);
+                  Navigator.of(context).pop();
+                },
+                child: Text('Gallery'),
+              ),
+            ],
+          );
+        });
   }
 }

@@ -1,5 +1,4 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:catatan_keuangan/view/register_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -91,7 +90,7 @@ class _LoginViewState extends State<LoginView> {
                         width: double.infinity,
                         margin: const EdgeInsets.all(20),
                         decoration: const BoxDecoration(
-                          color: Color(0xFFFFFFFF),
+                          color: Colors.white,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(50),
                             bottomRight: Radius.circular(50),

@@ -1,3 +1,4 @@
+import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
 import 'package:flutter/material.dart';
@@ -69,11 +70,7 @@ class ListItem extends StatelessWidget {
           ],
         ),
         child: ListTile(
-          leading: Image.asset(
-            'assets/${transaksi.kategori.gambar}',
-            height: 40,
-            width: 40,
-          ),
+          leading: kategoriIcon(transaksi.kategori),
           title: Text(
             transaksi.nama,
             style: const TextStyle(
