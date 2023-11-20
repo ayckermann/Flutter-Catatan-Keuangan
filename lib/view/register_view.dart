@@ -67,10 +67,11 @@ class _RegisterViewState extends State<RegisterView> {
               email: email, password: password);
 
           await akunCollection.add({
+            'uid': _auth.currentUser!.uid,
             'nama': nama,
             'email': email,
-            'uid': _auth.currentUser!.uid,
             'saldo': 0,
+            'docId' : akunCollection.id,
             // ignore: invalid_return_type_for_catch_error
           }).catchError((error) => print("Failed to add user: $error"));
         }

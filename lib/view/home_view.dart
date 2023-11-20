@@ -23,10 +23,12 @@ class _HomeViewState extends State<HomeView> {
   final _firestore = FirebaseFirestore.instance;
 
   Akun akun = Akun(
-      uid: '',
-      nama: '',
-      saldo: 0,
-      email: ''); // null safety sebelum fetch dari firebase di initState
+    uid: '',
+    nama: '',
+    saldo: 0,
+    email: '',
+    docId: '',
+  ); // null safety sebelum fetch dari firebase di initState
 
   void logout() async {
     final navigator = Navigator.of(context);
@@ -53,7 +55,8 @@ class _HomeViewState extends State<HomeView> {
             uid: userData['uid'],
             nama: userData['nama'],
             saldo: userData['saldo'],
-            email: userData['email']);
+            email: userData['email'],
+            docId: userData['docId']);
       });
     } else {
       print('Document not found!');
@@ -107,41 +110,50 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ),
                 const SizedBox(height: 15),
-                Container(
-                  padding: EdgeInsets.all(20),
-                  height: 170,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: headerColor),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Saldo anda saat ini',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontFamily: famSemi,
+                InkWell(
+                  onTap: (){
+                    setState(() {
+                      getAkun();
+                    });
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(20),
+                    height: 170,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: headerColor),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Saldo anda saat ini',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: famSemi,
+                          ),
                         ),
-                      ),
-                      Text(
-                        numFormat.format(akun.saldo),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 35,
-                          fontFamily: 'Poppins-bold',
+                        Text(
+                          numFormat.format(akun.saldo),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 35,
+                            fontFamily: 'Poppins-bold',
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ) ,
                 ),
+
                 const SizedBox(height: 25),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: _firestore
                           .collection('transaksi')
                           .where('uid', isEqualTo: akun.uid)
+                          .orderBy('tanggal', descending: true)
                           .snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
@@ -178,6 +190,8 @@ class _HomeViewState extends State<HomeView> {
                           itemBuilder: (context, index) {
                             return ListItem(
                               transaksi: listTransaksi[index],
+                              docsId: snapshot.data!.docs[index].id,
+                              akunDocId: akun.docId,
                             );
                           },
                         );
@@ -189,8 +203,12 @@ class _HomeViewState extends State<HomeView> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const TambahPage()));
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => TambahPage(
+                          akunDocId: akun.docId,
+                        )));
           },
           backgroundColor: primaryColor,
           shape:

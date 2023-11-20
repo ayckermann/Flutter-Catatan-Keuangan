@@ -10,7 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class TambahPage extends StatefulWidget {
-  const TambahPage({super.key});
+  final String akunDocId;
+  const TambahPage({super.key, required this.akunDocId});
 
   @override
   State<TambahPage> createState() => _TambahPageState();
@@ -46,9 +47,17 @@ class _TambahPageState extends State<TambahPage> {
     } catch (e) {
       print(e);
     }
+  }
 
-    setState(() {
-      fileController.text = file.name;
+  Future<void> updateSaldo(){
+    var ref =  _firestore.collection('akun').doc(widget.akunDocId);
+
+    int saldo = int.parse(nominalController.text);
+    if(!jenisController){
+      saldo *= -1;
+    }
+    return ref.update({
+      'saldo' : FieldValue.increment(saldo)
     });
   }
 
@@ -155,11 +164,11 @@ class _TambahPageState extends State<TambahPage> {
                     items: const [
                       DropdownMenuItem(
                         value: true,
-                        child: Text('Pengeluaran', style: textRegular),
+                        child: Text('Pemasukan', style: textRegular),
                       ),
                       DropdownMenuItem(
                         value: false,
-                        child: Text('Pemasukan', style: textRegular),
+                        child: Text('Pengeluaran', style: textRegular),
                       )
                     ],
                     onChanged: (value) =>
@@ -220,7 +229,7 @@ class _TambahPageState extends State<TambahPage> {
                     controller: deskripsiController,
                     maxLines: 5,
                     decoration: const InputDecoration(
-                      hintText: 'Keterangan',
+                      hintText: 'Deskripsi',
                       hintStyle: textRegular,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10))),
@@ -236,7 +245,8 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        addTransaksi();
+                        addTransaksi() ;
+                        updateSaldo();
                         Navigator.pop(context);
                       },
                       child: Text('Tambah Transaksi', style: textButton),
@@ -264,6 +274,9 @@ class _TambahPageState extends State<TambahPage> {
               TextButton(
                 onPressed: () async {
                   file = await picker.pickImage(source: ImageSource.camera);
+                  setState(() {
+                    fileController.text = file?.name ?? '';
+                  });
                   uploadImage(file);
                   Navigator.of(context).pop();
                 },
@@ -272,6 +285,9 @@ class _TambahPageState extends State<TambahPage> {
               TextButton(
                 onPressed: () async {
                   file = await picker.pickImage(source: ImageSource.gallery);
+                  setState(() {
+                    fileController.text = file?.name ?? '';
+                  });
                   uploadImage(file);
                   Navigator.of(context).pop();
                 },

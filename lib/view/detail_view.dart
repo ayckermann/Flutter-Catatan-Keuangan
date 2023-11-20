@@ -1,6 +1,7 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:catatan_keuangan/view/update_view.dart';
@@ -43,7 +44,9 @@ class DetailPage extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                 child: transaksi.gambar == ''
                     ? const Text('Tidak ada gambar')
-                    : Image.network(transaksi.gambar),
+                    : Image.network(transaksi.gambar
+                        // url,
+                        ),
               ),
               Container(
                   decoration: const BoxDecoration(
@@ -179,7 +182,10 @@ class DetailPage extends StatelessWidget {
                     ),
                   ),
                 ],
-              )
+              ),
+              const SizedBox(
+                height: 32,
+              ),
             ],
           ),
         ));
