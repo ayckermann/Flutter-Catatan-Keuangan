@@ -71,7 +71,7 @@ class _RegisterViewState extends State<RegisterView> {
             'nama': nama,
             'email': email,
             'saldo': 0,
-            'docId' : akunCollection.id,
+            'docId': akunCollection.id,
             // ignore: invalid_return_type_for_catch_error
           }).catchError((error) => print("Failed to add user: $error"));
         }
@@ -173,21 +173,6 @@ class _RegisterViewState extends State<RegisterView> {
                     ],
                   ),
                 )),
-      ),
-    );
-  }
-
-  Container formTitle(String title) {
-    return Container(
-      margin: const EdgeInsets.only(left: 30, top: 30),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Color(0xFFFFFFFF),
-          fontSize: 32,
-          fontWeight: FontWeight.w900,
-          fontFamily: 'Poppins-bold',
-        ),
       ),
     );
   }

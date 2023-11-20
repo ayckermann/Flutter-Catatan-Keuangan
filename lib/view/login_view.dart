@@ -141,19 +141,4 @@ class _LoginViewState extends State<LoginView> {
       ),
     );
   }
-
-  Container formTitle(String title) {
-    return Container(
-      margin: const EdgeInsets.only(left: 30, top: 30),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Color(0xFFFFFFFF),
-          fontSize: 32,
-          fontWeight: FontWeight.w900,
-          fontFamily: famBold,
-        ),
-      ),
-    );
-  }
 }

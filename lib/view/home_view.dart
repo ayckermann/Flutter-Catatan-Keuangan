@@ -111,7 +111,7 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 const SizedBox(height: 15),
                 InkWell(
-                  onTap: (){
+                  onTap: () {
                     setState(() {
                       getAkun();
                     });
@@ -144,9 +144,8 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       ],
                     ),
-                  ) ,
+                  ),
                 ),
-
                 const SizedBox(height: 25),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -190,7 +189,7 @@ class _HomeViewState extends State<HomeView> {
                           itemBuilder: (context, index) {
                             return ListItem(
                               transaksi: listTransaksi[index],
-                              docsId: snapshot.data!.docs[index].id,
+                              transaksiDocId: snapshot.data!.docs[index].id,
                               akunDocId: akun.docId,
                             );
                           },

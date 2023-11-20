@@ -8,10 +8,14 @@ import 'package:catatan_keuangan/view/update_view.dart';
 
 class DetailPage extends StatelessWidget {
   final Transaksi transaksi;
+  final String transaksiDocId;
+  final String akunDocId;
 
   const DetailPage({
     super.key,
     required this.transaksi,
+    required this.transaksiDocId,
+    required this.akunDocId,
   });
 
   @override
@@ -153,7 +157,11 @@ class DetailPage extends StatelessWidget {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => UpdatePage()));
+                                builder: (context) => UpdatePage(
+                                      transaksi: transaksi,
+                                      akunDocId: akunDocId,
+                                      transaksiDocId: transaksiDocId,
+                                    )));
                       },
                       child: const Text(
                         'Edit',

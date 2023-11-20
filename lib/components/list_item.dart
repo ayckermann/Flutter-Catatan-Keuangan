@@ -10,13 +10,13 @@ import 'package:catatan_keuangan/view/update_view.dart';
 
 class ListItem extends StatefulWidget {
   final Transaksi transaksi;
-  final String docsId;
+  final String transaksiDocId;
   final String akunDocId;
 
   const ListItem({
     super.key,
     required this.transaksi,
-    required this.docsId,
+    required this.transaksiDocId,
     required this.akunDocId,
   });
 
@@ -28,12 +28,14 @@ class _ListItemState extends State<ListItem> {
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  Future<void> deleteFile(String urlFile) async {
-    try {
-      final ref = _storage.refFromURL(urlFile);
-      await ref.delete();
-    } catch (e) {
-      print(e.toString());
+  Future<void> delete() async {
+    await _firestore
+        .collection("transaksi")
+        .doc(widget.transaksiDocId)
+        .delete();
+
+    if (widget.transaksi.gambar != '') {
+      await _storage.refFromURL(widget.transaksi.gambar).delete();
     }
   }
 
@@ -82,6 +84,8 @@ class _ListItemState extends State<ListItem> {
               MaterialPageRoute(
                 builder: (context) => DetailPage(
                   transaksi: widget.transaksi,
+                  transaksiDocId: widget.transaksiDocId,
+                  akunDocId: widget.akunDocId,
                 ),
               ),
             );
@@ -96,24 +100,22 @@ class _ListItemState extends State<ListItem> {
                       TextButton(
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
-                          Navigator.push(
+                          Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: ((context) => UpdatePage())));
+                                  builder: ((context) => UpdatePage(
+                                        transaksi: widget.transaksi,
+                                        akunDocId: widget.akunDocId,
+                                        transaksiDocId: widget.transaksiDocId,
+                                      ))));
                         },
                         child: Text('Edit'),
                       ),
                       TextButton(
-                        onPressed: () async {
-                          await _firestore
-                              .collection("transaksi")
-                              .doc(widget.docsId)
-                              .delete();
+                        onPressed: () {
+                          delete();
 
-                          await _storage
-                              .refFromURL(widget.transaksi.gambar)
-                              .delete();
-                          // Navigator.;
+                          Navigator.of(context).pop();
                         },
                         child: Text('Hapus'),
                       ),
