@@ -1,12 +1,14 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:catatan_keuangan/view/update_view.dart';
 
-class DetailPage extends StatelessWidget {
+class DetailPage extends StatefulWidget {
   final Transaksi transaksi;
   final String transaksiDocId;
   final String akunDocId;
@@ -17,6 +19,25 @@ class DetailPage extends StatelessWidget {
     required this.transaksiDocId,
     required this.akunDocId,
   });
+
+  @override
+  State<DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> {
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
+
+  Future<void> delete() async {
+    await _firestore
+        .collection("transaksi")
+        .doc(widget.transaksiDocId)
+        .delete();
+
+    if (widget.transaksi.gambar != '') {
+      await _storage.refFromURL(widget.transaksi.gambar).delete();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +58,7 @@ class DetailPage extends StatelessWidget {
             children: [
               Container(
                 margin: const EdgeInsets.only(top: 40),
-                child: transaksi.jenis
+                child: widget.transaksi.jenis
                     ? const Text('Transaksi Masuk',
                         textAlign: TextAlign.center, style: textBold)
                     : const Text('Transaksi Keluar',
@@ -46,9 +67,9 @@ class DetailPage extends StatelessWidget {
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                child: transaksi.gambar == ''
+                child: widget.transaksi.gambar == ''
                     ? const Text('Tidak ada gambar')
-                    : Image.network(transaksi.gambar
+                    : Image.network(widget.transaksi.gambar
                         // url,
                         ),
               ),
@@ -59,9 +80,10 @@ class DetailPage extends StatelessWidget {
                   ),
                   margin: const EdgeInsets.symmetric(vertical: 10),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text(numFormat.format(transaksi.nominal),
+                  child: Text(numFormat.format(widget.transaksi.nominal),
                       textAlign: TextAlign.center,
-                      style: transaksi.jenis ? priceMasuk : priceKeluar)),
+                      style:
+                          widget.transaksi.jenis ? priceMasuk : priceKeluar)),
               Container(
                 margin: const EdgeInsets.only(top: 10),
                 padding:
@@ -73,7 +95,7 @@ class DetailPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          transaksi.nama,
+                          widget.transaksi.nama,
                           style: const TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold),
                         ),
@@ -90,7 +112,7 @@ class DetailPage extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                transaksi.kategori,
+                                widget.transaksi.kategori,
                                 style: const TextStyle(
                                     fontSize: 12, color: secondaryColor),
                               ),
@@ -106,7 +128,7 @@ class DetailPage extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                dateFormat.format(transaksi.tanggal),
+                                dateFormat.format(widget.transaksi.tanggal),
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ),
@@ -114,7 +136,7 @@ class DetailPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    kategoriIcon(transaksi.kategori),
+                    kategoriIcon(widget.transaksi.kategori),
                   ],
                 ),
               ),
@@ -133,7 +155,7 @@ class DetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    transaksi.deskripsi,
+                    widget.transaksi.deskripsi,
                     textAlign: TextAlign.start,
                     style: const TextStyle(fontSize: 14),
                   ),
@@ -158,9 +180,9 @@ class DetailPage extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                                 builder: (context) => UpdatePage(
-                                      transaksi: transaksi,
-                                      akunDocId: akunDocId,
-                                      transaksiDocId: transaksiDocId,
+                                      transaksi: widget.transaksi,
+                                      akunDocId: widget.akunDocId,
+                                      transaksiDocId: widget.transaksiDocId,
                                     )));
                       },
                       child: const Text(
@@ -179,7 +201,10 @@ class DetailPage extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        delete();
+                        Navigator.of(context).pop();
+                      },
                       child: const Text(
                         'Hapus',
                         style: TextStyle(
