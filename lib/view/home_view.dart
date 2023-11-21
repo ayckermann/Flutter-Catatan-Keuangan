@@ -123,24 +123,33 @@ class _HomeViewState extends State<HomeView> {
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         color: headerColor),
-                    child: Column(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Saldo anda saat ini',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontFamily: famSemi,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Saldo anda saat ini',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontFamily: famSemi,
+                              ),
+                            ),
+                            Text(
+                              numFormat.format(akun.saldo),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 35,
+                                fontFamily: 'Poppins-bold',
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          numFormat.format(akun.saldo),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 35,
-                            fontFamily: 'Poppins-bold',
-                          ),
+                        Container(
+                          child: const Icon(Icons.refresh, color: Colors.white),
                         ),
                       ],
                     ),

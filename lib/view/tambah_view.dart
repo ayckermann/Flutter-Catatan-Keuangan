@@ -29,10 +29,12 @@ class _TambahPageState extends State<TambahPage> {
   String kategoriController = '';
   TextEditingController deskripsiController = TextEditingController();
   TextEditingController fileController = TextEditingController();
-  String imageUrl = '';
 
-  Future<void> uploadImage(XFile? file) async {
-    if (file == null) return;
+  ImagePicker picker = ImagePicker();
+  XFile? file;
+
+  Future<String> uploadImage() async {
+    if (file == null) return '';
 
     String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -41,24 +43,23 @@ class _TambahPageState extends State<TambahPage> {
     Reference storedDir = dirUpload.child(uniqueFilename);
 
     try {
-      await storedDir.putFile(File(file.path));
+      await storedDir.putFile(File(file!.path));
 
-      imageUrl = await storedDir.getDownloadURL();
+      return await storedDir.getDownloadURL();
     } catch (e) {
       print(e);
+      return '';
     }
   }
 
-  Future<void> updateSaldo(){
-    var ref =  _firestore.collection('akun').doc(widget.akunDocId);
+  Future<void> updateSaldo() {
+    var ref = _firestore.collection('akun').doc(widget.akunDocId);
 
     int saldo = int.parse(nominalController.text);
-    if(!jenisController){
+    if (!jenisController) {
       saldo *= -1;
     }
-    return ref.update({
-      'saldo' : FieldValue.increment(saldo)
-    });
+    return ref.update({'saldo': FieldValue.increment(saldo)});
   }
 
   @override
@@ -66,22 +67,24 @@ class _TambahPageState extends State<TambahPage> {
     CollectionReference transaksiCollection =
         _firestore.collection('transaksi');
 
-    Future<void> addTransaksi() {
+    Future<void> addTransaksi() async {
       // Parse the string to DateTime
       DateTime parsedDateTime =
-          DateFormat('yyyy-MM-DD').parse(tanggalController.text);
+          DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
       // Convert DateTime to Firestore Timestamp
       Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      return transaksiCollection.add({
+      String url = await uploadImage();
+
+      await transaksiCollection.add({
         'nama': namaController.text,
         'tanggal': timestamp,
         'nominal': int.parse(nominalController.text),
         'jenis': jenisController,
         'kategori': kategoriController,
         'deskripsi': deskripsiController.text,
-        'gambar': imageUrl,
+        'gambar': url,
         'uid': _auth.currentUser!.uid,
         // ignore: invalid_return_type_for_catch_error
       }).catchError((error) => print("Failed to add user: $error"));
@@ -127,6 +130,8 @@ class _TambahPageState extends State<TambahPage> {
                   ),
                   const SizedBox(height: 20),
                   DateTimePicker(
+                    type: DateTimePickerType.dateTime,
+                    dateMask: 'MMMM dd, yyyy hh:mm a',
                     controller: tanggalController,
                     decoration: const InputDecoration(
                       hintText: 'Tanggal',
@@ -137,7 +142,6 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                     firstDate: DateTime(2000),
                     lastDate: DateTime.now(),
-                    dateMask: 'MMMM dd, yyyy',
                   ),
 
                   const SizedBox(height: 20),
@@ -153,7 +157,7 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  //dropdown katagori
+
                   DropdownButtonFormField(
                     decoration: const InputDecoration(
                       hintText: 'Jenis',
@@ -174,8 +178,8 @@ class _TambahPageState extends State<TambahPage> {
                     onChanged: (value) =>
                         setState(() => jenisController = value as bool),
                   ),
-                  SizedBox(height: 20),
-                  //dropdown katagori
+                  const SizedBox(height: 20),
+
                   DropdownButtonFormField(
                     decoration: const InputDecoration(
                       hintText: 'Kategori',
@@ -245,7 +249,7 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        addTransaksi() ;
+                        addTransaksi();
                         updateSaldo();
                         Navigator.pop(context);
                       },
@@ -262,9 +266,6 @@ class _TambahPageState extends State<TambahPage> {
   }
 
   Future<dynamic> uploadDialog(BuildContext context) {
-    ImagePicker picker = ImagePicker();
-    XFile? file;
-
     return showDialog(
         context: context,
         builder: (BuildContext) {
@@ -273,22 +274,27 @@ class _TambahPageState extends State<TambahPage> {
             actions: [
               TextButton(
                 onPressed: () async {
-                  file = await picker.pickImage(source: ImageSource.camera);
+                  XFile? upload =
+                      await picker.pickImage(source: ImageSource.camera);
+
                   setState(() {
-                    fileController.text = file?.name ?? '';
+                    file = upload;
+                    fileController.text = file!.name;
                   });
-                  uploadImage(file);
+
                   Navigator.of(context).pop();
                 },
                 child: Text('Camera'),
               ),
               TextButton(
                 onPressed: () async {
-                  file = await picker.pickImage(source: ImageSource.gallery);
+                  XFile? upload =
+                      await picker.pickImage(source: ImageSource.gallery);
                   setState(() {
-                    fileController.text = file?.name ?? '';
+                    file = upload;
+                    fileController.text = file!.name;
                   });
-                  uploadImage(file);
+
                   Navigator.of(context).pop();
                 },
                 child: Text('Gallery'),

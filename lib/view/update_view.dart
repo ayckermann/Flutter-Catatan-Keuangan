@@ -38,10 +38,13 @@ class _UpdatePageState extends State<UpdatePage> {
   TextEditingController deskripsiController = TextEditingController();
   TextEditingController fileController = TextEditingController();
 
-  String imageUrl = '';
+  ImagePicker picker = ImagePicker();
+  XFile? file;
 
-  Future<void> uploadImage(XFile? file) async {
-    if (file == null) return;
+  Future<String> uploadImage() async {
+    if (file == null) return '';
+
+    deleteOldImage();
 
     String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -50,20 +53,27 @@ class _UpdatePageState extends State<UpdatePage> {
     Reference storedDir = dirUpload.child(uniqueFilename);
 
     try {
-      await storedDir.putFile(File(file.path));
+      await storedDir.putFile(File(file!.path));
 
-      imageUrl = await storedDir.getDownloadURL();
+      return await storedDir.getDownloadURL();
     } catch (e) {
       print(e);
+      return '';
+    }
+  }
+
+  Future<void> deleteOldImage() async {
+    if (widget.transaksi.gambar != '') {
+      await _storage.refFromURL(widget.transaksi.gambar).delete();
     }
   }
 
   Future<void> updateSaldo() {
     var ref = _firestore.collection('akun').doc(widget.akunDocId);
 
-    int saldo = widget.transaksi.nominal - int.parse(nominalController.text);
+    int saldo = int.parse(nominalController.text) - widget.transaksi.nominal;
 
-    if (jenisController) {
+    if (!jenisController) {
       saldo *= -1;
     }
     return ref.update({'saldo': FieldValue.increment(saldo)});
@@ -93,22 +103,24 @@ class _UpdatePageState extends State<UpdatePage> {
     CollectionReference transaksiCollection =
         _firestore.collection('transaksi');
 
-    Future<void> updateTransaksi() {
+    Future<void> updateTransaksi() async {
       // Parse the string to DateTime
       DateTime parsedDateTime =
-          DateFormat('yyyy-MM-DD').parse(tanggalController.text);
+          DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
       // Convert DateTime to Firestore Timestamp
       Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      return transaksiCollection.doc(widget.transaksiDocId).update({
+      String url = await uploadImage();
+
+      await transaksiCollection.doc(widget.transaksiDocId).update({
         'nama': namaController.text,
         'tanggal': timestamp,
         'nominal': int.parse(nominalController.text),
         'jenis': jenisController,
         'kategori': kategoriController,
         'deskripsi': deskripsiController.text,
-        'gambar': imageUrl,
+        'gambar': url,
         'uid': _auth.currentUser!.uid,
         // ignore: invalid_return_type_for_catch_error
       }).catchError((error) => print("Failed to add user: $error"));
@@ -154,6 +166,8 @@ class _UpdatePageState extends State<UpdatePage> {
                   ),
                   const SizedBox(height: 20),
                   DateTimePicker(
+                    type: DateTimePickerType.dateTime,
+                    dateMask: 'MMMM dd, yyyy hh:mm a',
                     controller: tanggalController,
                     decoration: const InputDecoration(
                       hintText: 'Tanggal',
@@ -164,7 +178,6 @@ class _UpdatePageState extends State<UpdatePage> {
                     ),
                     firstDate: DateTime(2000),
                     lastDate: DateTime.now(),
-                    dateMask: 'MMMM dd, yyyy',
                   ),
 
                   const SizedBox(height: 20),
@@ -291,9 +304,6 @@ class _UpdatePageState extends State<UpdatePage> {
   }
 
   Future<dynamic> uploadDialog(BuildContext context) {
-    ImagePicker picker = ImagePicker();
-    XFile? file;
-
     return showDialog(
         context: context,
         builder: (BuildContext) {
@@ -302,22 +312,27 @@ class _UpdatePageState extends State<UpdatePage> {
             actions: [
               TextButton(
                 onPressed: () async {
-                  file = await picker.pickImage(source: ImageSource.camera);
+                  XFile? upload =
+                      await picker.pickImage(source: ImageSource.camera);
+
                   setState(() {
-                    fileController.text = file?.name ?? '';
+                    file = upload;
+                    fileController.text = file!.name;
                   });
-                  uploadImage(file);
+
                   Navigator.of(context).pop();
                 },
                 child: Text('Camera'),
               ),
               TextButton(
                 onPressed: () async {
-                  file = await picker.pickImage(source: ImageSource.gallery);
+                  XFile? upload =
+                      await picker.pickImage(source: ImageSource.gallery);
                   setState(() {
-                    fileController.text = file?.name ?? '';
+                    file = upload;
+                    fileController.text = file!.name;
                   });
-                  uploadImage(file);
+
                   Navigator.of(context).pop();
                 },
                 child: Text('Gallery'),

@@ -154,7 +154,7 @@ class DetailPage extends StatelessWidget {
                     child: TextButton(
                       onPressed: () {
                         //arahakan ke halaman detail
-                        Navigator.push(
+                        Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => UpdatePage(

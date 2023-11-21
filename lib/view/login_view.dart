@@ -63,7 +63,6 @@ class _LoginViewState extends State<LoginView> {
         _isLoading = false;
       });
     }
-    ;
   }
 
   @override
