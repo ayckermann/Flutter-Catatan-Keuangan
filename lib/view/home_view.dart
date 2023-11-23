@@ -32,7 +32,12 @@ class _HomeViewState extends State<HomeView> {
 
   void logout() async {
     final navigator = Navigator.of(context);
-    await _auth.signOut();
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      print(e);
+    }
+
     navigator.pushReplacement(
       MaterialPageRoute(builder: (context) {
         return LoginView();
@@ -42,24 +47,41 @@ class _HomeViewState extends State<HomeView> {
 
   Future<void> getAkun() async {
     final User? user = _auth.currentUser;
-    QuerySnapshot querySnapshot = await _firestore
-        .collection('akun')
-        .where('uid', isEqualTo: user!.uid)
-        .limit(1)
-        .get();
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('akun')
+          .where('uid', isEqualTo: user!.uid)
+          .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        var userData = querySnapshot.docs.first.data() as Map<String, dynamic>;
+        setState(() {
+          akun = Akun(
+              uid: userData['uid'],
+              nama: userData['nama'],
+              saldo: userData['saldo'],
+              email: userData['email'],
+              docId: userData['docId']);
+        });
+      } else {
+        print('Document not found!');
+      }
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    }
+  }
 
-    if (querySnapshot.docs.isNotEmpty) {
-      var userData = querySnapshot.docs.first.data() as Map<String, dynamic>;
-      setState(() {
-        akun = Akun(
-            uid: userData['uid'],
-            nama: userData['nama'],
-            saldo: userData['saldo'],
-            email: userData['email'],
-            docId: userData['docId']);
-      });
-    } else {
-      print('Document not found!');
+  Stream<QuerySnapshot<Map<String, dynamic>>> getTransaksi() {
+    try {
+      return _firestore
+          .collection('transaksi')
+          .where('uid', isEqualTo: akun.uid)
+          .orderBy('tanggal', descending: true)
+          .snapshots();
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+      return Stream.error(e);
     }
   }
 
@@ -110,59 +132,39 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ),
                 const SizedBox(height: 15),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      getAkun();
-                    });
-                  },
-                  child: Container(
-                    padding: EdgeInsets.all(20),
-                    height: 170,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: headerColor),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Saldo anda saat ini',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontFamily: famSemi,
-                              ),
-                            ),
-                            Text(
-                              numFormat.format(akun.saldo),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 35,
-                                fontFamily: 'Poppins-bold',
-                              ),
-                            ),
-                          ],
+                Container(
+                  padding: EdgeInsets.all(20),
+                  height: 170,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: headerColor),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Saldo anda saat ini',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontFamily: famSemi,
                         ),
-                        Container(
-                          child: const Icon(Icons.refresh, color: Colors.white),
+                      ),
+                      Text(
+                        numFormat.format(akun.saldo),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 35,
+                          fontFamily: 'Poppins-bold',
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 25),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: _firestore
-                          .collection('transaksi')
-                          .where('uid', isEqualTo: akun.uid)
-                          .orderBy('tanggal', descending: true)
-                          .snapshots(),
+                      stream: getTransaksi(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
                           return const Center(
@@ -216,7 +218,9 @@ class _HomeViewState extends State<HomeView> {
                 MaterialPageRoute(
                     builder: (context) => TambahPage(
                           akunDocId: akun.docId,
-                        )));
+                        ))).then((value) => setState(() {
+                  getAkun();
+                }));
           },
           backgroundColor: primaryColor,
           shape:

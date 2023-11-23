@@ -28,46 +28,26 @@ class _TambahPageState extends State<TambahPage> {
   bool jenisController = true;
   String kategoriController = '';
   TextEditingController deskripsiController = TextEditingController();
-  TextEditingController fileController = TextEditingController();
 
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<String> uploadImage() async {
-    if (file == null) return '';
-
-    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
-
-    Reference dirUpload =
-        _storage.ref().child('upload/${_auth.currentUser!.uid}');
-    Reference storedDir = dirUpload.child(uniqueFilename);
-
+  Future<void> addTransaksi() async {
     try {
-      await storedDir.putFile(File(file!.path));
+      if (namaController.text.isEmpty ||
+          namaController.text == "" ||
+          tanggalController.text.isEmpty ||
+          tanggalController.text == "" ||
+          nominalController.text.isEmpty ||
+          nominalController.text == "" ||
+          kategoriController.isEmpty ||
+          kategoriController == "") {
+        throw ("Please fill requied field");
+      }
 
-      return await storedDir.getDownloadURL();
-    } catch (e) {
-      print(e);
-      return '';
-    }
-  }
+      CollectionReference transaksiCollection =
+          _firestore.collection('transaksi');
 
-  Future<void> updateSaldo() {
-    var ref = _firestore.collection('akun').doc(widget.akunDocId);
-
-    int saldo = int.parse(nominalController.text);
-    if (!jenisController) {
-      saldo *= -1;
-    }
-    return ref.update({'saldo': FieldValue.increment(saldo)});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    CollectionReference transaksiCollection =
-        _firestore.collection('transaksi');
-
-    Future<void> addTransaksi() async {
       // Parse the string to DateTime
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
@@ -86,10 +66,45 @@ class _TambahPageState extends State<TambahPage> {
         'deskripsi': deskripsiController.text,
         'gambar': url,
         'uid': _auth.currentUser!.uid,
-        // ignore: invalid_return_type_for_catch_error
-      }).catchError((error) => print("Failed to add user: $error"));
+      });
+      updateSaldo();
+      Navigator.pop(context);
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
+  }
 
+  Future<String> uploadImage() async {
+    if (file == null) return '';
+
+    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
+
+    Reference dirUpload =
+        _storage.ref().child('upload/${_auth.currentUser!.uid}');
+    Reference storedDir = dirUpload.child(uniqueFilename);
+
+    try {
+      await storedDir.putFile(File(file!.path));
+
+      return await storedDir.getDownloadURL();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Future<void> updateSaldo() {
+    var ref = _firestore.collection('akun').doc(widget.akunDocId);
+
+    int saldo = int.parse(nominalController.text);
+    if (!jenisController) {
+      saldo *= -1;
+    }
+    return ref.update({'saldo': FieldValue.increment(saldo)});
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
@@ -143,7 +158,6 @@ class _TambahPageState extends State<TambahPage> {
                     firstDate: DateTime(2000),
                     lastDate: DateTime.now(),
                   ),
-
                   const SizedBox(height: 20),
                   TextField(
                     controller: nominalController,
@@ -157,7 +171,6 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
                   DropdownButtonFormField(
                     decoration: const InputDecoration(
                       hintText: 'Jenis',
@@ -179,7 +192,6 @@ class _TambahPageState extends State<TambahPage> {
                         setState(() => jenisController = value as bool),
                   ),
                   const SizedBox(height: 20),
-
                   DropdownButtonFormField(
                     decoration: const InputDecoration(
                       hintText: 'Kategori',
@@ -213,20 +225,31 @@ class _TambahPageState extends State<TambahPage> {
                         setState(() => kategoriController = value as String),
                   ),
                   SizedBox(height: 20),
-                  //masukkan file
-                  TextField(
-                    decoration: const InputDecoration(
-                        hintText: 'Masukkan File',
-                        hintStyle: textRegular,
-                        suffixIcon: Icon(Icons.attach_file),
-                        border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10)))),
-                    controller: fileController,
-                    readOnly: true,
-                    onTap: () {
-                      uploadDialog(context);
-                    },
+
+                  //masukan file
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      imagePreview(),
+                      IconButton(
+                        onPressed: () {
+                          uploadDialog(context);
+                        },
+                        icon: const Icon(Icons.attach_file),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.all<Color>(secondaryColor),
+                          foregroundColor:
+                              MaterialStateProperty.all<Color>(Colors.white),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -244,14 +267,12 @@ class _TambahPageState extends State<TambahPage> {
                     width: double.infinity,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: const Color.fromRGBO(0, 150, 199, 1),
+                      color: secondaryColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: TextButton(
                       onPressed: () {
                         addTransaksi();
-                        updateSaldo();
-                        Navigator.pop(context);
                       },
                       child: Text('Tambah Transaksi', style: textButton),
                     ),
@@ -263,6 +284,14 @@ class _TambahPageState extends State<TambahPage> {
         ),
       ),
     );
+  }
+
+  Image imagePreview() {
+    if (file == null) {
+      return Image.asset('assets/no-picture.jpg', width: 200, height: 200);
+    } else {
+      return Image.file(File(file!.path), width: 200, height: 200);
+    }
   }
 
   Future<dynamic> uploadDialog(BuildContext context) {
@@ -279,12 +308,11 @@ class _TambahPageState extends State<TambahPage> {
 
                   setState(() {
                     file = upload;
-                    fileController.text = file!.name;
                   });
 
                   Navigator.of(context).pop();
                 },
-                child: Text('Camera'),
+                child: const Icon(Icons.camera_alt),
               ),
               TextButton(
                 onPressed: () async {
@@ -292,12 +320,11 @@ class _TambahPageState extends State<TambahPage> {
                       await picker.pickImage(source: ImageSource.gallery);
                   setState(() {
                     file = upload;
-                    fileController.text = file!.name;
                   });
 
                   Navigator.of(context).pop();
                 },
-                child: Text('Gallery'),
+                child: const Icon(Icons.photo_library),
               ),
             ],
           );

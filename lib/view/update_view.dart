@@ -36,10 +36,51 @@ class _UpdatePageState extends State<UpdatePage> {
   bool jenisController = true;
   String kategoriController = '';
   TextEditingController deskripsiController = TextEditingController();
-  TextEditingController fileController = TextEditingController();
 
   ImagePicker picker = ImagePicker();
   XFile? file;
+
+  Future<void> updateTransaksi() async {
+    try {
+      if (namaController.text.isEmpty ||
+          namaController.text == "" ||
+          tanggalController.text.isEmpty ||
+          tanggalController.text == "" ||
+          nominalController.text.isEmpty ||
+          nominalController.text == "" ||
+          kategoriController.isEmpty ||
+          kategoriController == "") {
+        throw ("Please fill requied field");
+      }
+      CollectionReference transaksiCollection =
+          _firestore.collection('transaksi');
+      // Parse the string to DateTime
+      DateTime parsedDateTime =
+          DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
+
+      // Convert DateTime to Firestore Timestamp
+      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
+
+      String url = await uploadImage();
+
+      await transaksiCollection.doc(widget.transaksiDocId).update({
+        'nama': namaController.text,
+        'tanggal': timestamp,
+        'nominal': int.parse(nominalController.text),
+        'jenis': jenisController,
+        'kategori': kategoriController,
+        'deskripsi': deskripsiController.text,
+        'gambar': url,
+        'uid': _auth.currentUser!.uid,
+        // ignore: invalid_return_type_for_catch_error
+      });
+      updateSaldo();
+      Navigator.pop(context);
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    }
+  }
 
   Future<String> uploadImage() async {
     if (file == null) return '';
@@ -57,7 +98,6 @@ class _UpdatePageState extends State<UpdatePage> {
 
       return await storedDir.getDownloadURL();
     } catch (e) {
-      print(e);
       return '';
     }
   }
@@ -87,7 +127,6 @@ class _UpdatePageState extends State<UpdatePage> {
       jenisController = widget.transaksi.jenis;
       kategoriController = widget.transaksi.kategori;
       deskripsiController.text = widget.transaksi.deskripsi;
-      fileController.text = widget.transaksi.gambar;
     });
   }
 
@@ -100,32 +139,6 @@ class _UpdatePageState extends State<UpdatePage> {
 
   @override
   Widget build(BuildContext context) {
-    CollectionReference transaksiCollection =
-        _firestore.collection('transaksi');
-
-    Future<void> updateTransaksi() async {
-      // Parse the string to DateTime
-      DateTime parsedDateTime =
-          DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
-
-      // Convert DateTime to Firestore Timestamp
-      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
-
-      String url = await uploadImage();
-
-      await transaksiCollection.doc(widget.transaksiDocId).update({
-        'nama': namaController.text,
-        'tanggal': timestamp,
-        'nominal': int.parse(nominalController.text),
-        'jenis': jenisController,
-        'kategori': kategoriController,
-        'deskripsi': deskripsiController.text,
-        'gambar': url,
-        'uid': _auth.currentUser!.uid,
-        // ignore: invalid_return_type_for_catch_error
-      }).catchError((error) => print("Failed to add user: $error"));
-    }
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
@@ -252,19 +265,29 @@ class _UpdatePageState extends State<UpdatePage> {
                   ),
                   SizedBox(height: 20),
                   //masukkan file
-                  TextField(
-                    decoration: const InputDecoration(
-                        hintText: 'Masukkan File',
-                        hintStyle: textRegular,
-                        suffixIcon: Icon(Icons.attach_file),
-                        border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(10)))),
-                    controller: fileController,
-                    readOnly: true,
-                    onTap: () {
-                      uploadDialog(context);
-                    },
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      imagePreview(),
+                      IconButton(
+                        onPressed: () {
+                          uploadDialog(context);
+                        },
+                        icon: const Icon(Icons.attach_file),
+                        style: ButtonStyle(
+                          backgroundColor:
+                              MaterialStateProperty.all<Color>(secondaryColor),
+                          foregroundColor:
+                              MaterialStateProperty.all<Color>(Colors.white),
+                          shape:
+                              MaterialStateProperty.all<RoundedRectangleBorder>(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -288,8 +311,6 @@ class _UpdatePageState extends State<UpdatePage> {
                     child: TextButton(
                       onPressed: () {
                         updateTransaksi();
-                        updateSaldo();
-                        Navigator.pop(context);
                       },
                       child: Text('Edit Transaksi', style: textButton),
                     ),
@@ -301,6 +322,17 @@ class _UpdatePageState extends State<UpdatePage> {
         ),
       ),
     );
+  }
+
+  Image imagePreview() {
+    if (file != null) {
+      return Image.file(File(file!.path), width: 200, height: 200);
+    } else {
+      if (widget.transaksi.gambar != '') {
+        return Image.network(widget.transaksi.gambar, width: 200, height: 200);
+      }
+      return Image.asset('assets/no-picture.jpg', width: 200, height: 200);
+    }
   }
 
   Future<dynamic> uploadDialog(BuildContext context) {
@@ -317,12 +349,11 @@ class _UpdatePageState extends State<UpdatePage> {
 
                   setState(() {
                     file = upload;
-                    fileController.text = file!.name;
                   });
 
                   Navigator.of(context).pop();
                 },
-                child: Text('Camera'),
+                child: const Icon(Icons.camera_alt),
               ),
               TextButton(
                 onPressed: () async {
@@ -330,12 +361,11 @@ class _UpdatePageState extends State<UpdatePage> {
                       await picker.pickImage(source: ImageSource.gallery);
                   setState(() {
                     file = upload;
-                    fileController.text = file!.name;
                   });
 
                   Navigator.of(context).pop();
                 },
-                child: Text('Gallery'),
+                child: const Icon(Icons.photo_library),
               ),
             ],
           );

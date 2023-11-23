@@ -1,6 +1,7 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -29,13 +30,18 @@ class _ListItemState extends State<ListItem> {
   final _storage = FirebaseStorage.instance;
 
   Future<void> delete() async {
-    await _firestore
-        .collection("transaksi")
-        .doc(widget.transaksiDocId)
-        .delete();
+    try {
+      await _firestore
+          .collection("transaksi")
+          .doc(widget.transaksiDocId)
+          .delete();
 
-    if (widget.transaksi.gambar != '') {
-      await _storage.refFromURL(widget.transaksi.gambar).delete();
+      if (widget.transaksi.gambar != '') {
+        await _storage.refFromURL(widget.transaksi.gambar).delete();
+      }
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
   }
 
@@ -101,13 +107,22 @@ class _ListItemState extends State<ListItem> {
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
                           Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: ((context) => UpdatePage(
+                                    transaksi: widget.transaksi,
+                                    akunDocId: widget.akunDocId,
+                                    transaksiDocId: widget.transaksiDocId,
+                                  )),
+                            ),
+                          ).then(
+                            (value) => Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: ((context) => UpdatePage(
-                                        transaksi: widget.transaksi,
-                                        akunDocId: widget.akunDocId,
-                                        transaksiDocId: widget.transaksiDocId,
-                                      ))));
+                                builder: (context) => HomeView(),
+                              ),
+                            ),
+                          );
                         },
                         child: Text('Edit'),
                       ),

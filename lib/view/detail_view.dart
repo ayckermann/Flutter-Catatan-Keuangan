@@ -1,6 +1,7 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -68,7 +69,7 @@ class _DetailPageState extends State<DetailPage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                 child: widget.transaksi.gambar == ''
-                    ? const Text('Tidak ada gambar')
+                    ? Image.asset('assets/no-picture.jpg')
                     : Image.network(widget.transaksi.gambar
                         // url,
                         ),
@@ -177,13 +178,15 @@ class _DetailPageState extends State<DetailPage> {
                       onPressed: () {
                         //arahakan ke halaman detail
                         Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => UpdatePage(
-                                      transaksi: widget.transaksi,
-                                      akunDocId: widget.akunDocId,
-                                      transaksiDocId: widget.transaksiDocId,
-                                    )));
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UpdatePage(
+                              transaksi: widget.transaksi,
+                              akunDocId: widget.akunDocId,
+                              transaksiDocId: widget.transaksiDocId,
+                            ),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Edit',
