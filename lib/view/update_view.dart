@@ -4,6 +4,7 @@ import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -263,32 +264,7 @@ class _UpdatePageState extends State<UpdatePage> {
                     onChanged: (value) =>
                         setState(() => kategoriController = value as String),
                   ),
-                  SizedBox(height: 20),
-                  //masukkan file
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      imagePreview(),
-                      IconButton(
-                        onPressed: () {
-                          uploadDialog(context);
-                        },
-                        icon: const Icon(Icons.attach_file),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.all<Color>(secondaryColor),
-                          foregroundColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+
                   const SizedBox(height: 20),
                   TextField(
                     controller: deskripsiController,
@@ -298,6 +274,46 @@ class _UpdatePageState extends State<UpdatePage> {
                       hintStyle: textRegular,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(10))),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  //masukkan file
+                  Container(
+                    child: DottedBorder(
+                      dashPattern: [6, 3, 0, 3],
+                      borderType: BorderType.RRect,
+                      radius: Radius.circular(10),
+                      color: Colors.black54,
+                      child: Row(
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              SizedBox(height: 20),
+                              imagePreview(),
+                              Container(
+                                margin: EdgeInsets.all(20),
+                                width: 100,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: const Color.fromRGBO(0, 150, 199, 1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: TextButton(
+                                  onPressed: () {
+                                    uploadDialog(context);
+                                  },
+                                  child: Text('Choose Image',
+                                      style: TextStyle(
+                                          fontFamily: famSemi,
+                                          color: Colors.white,
+                                          fontSize: 10)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 50),
@@ -326,12 +342,12 @@ class _UpdatePageState extends State<UpdatePage> {
 
   Image imagePreview() {
     if (file != null) {
-      return Image.file(File(file!.path), width: 200, height: 200);
+      return Image.file(File(file!.path), width: 320, height: 180);
     } else {
       if (widget.transaksi.gambar != '') {
-        return Image.network(widget.transaksi.gambar, width: 200, height: 200);
+        return Image.network(widget.transaksi.gambar, width: 320, height: 180);
       }
-      return Image.asset('assets/no-picture.jpg', width: 200, height: 200);
+      return Image.asset('assets/image.png', width: 320, height: 180);
     }
   }
 
