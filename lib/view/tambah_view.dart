@@ -10,8 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class TambahPage extends StatefulWidget {
-  final String akunDocId;
-  const TambahPage({super.key, required this.akunDocId});
+  const TambahPage({super.key});
 
   @override
   State<TambahPage> createState() => _TambahPageState();
@@ -32,7 +31,7 @@ class _TambahPageState extends State<TambahPage> {
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<void> addTransaksi() async {
+  Future<void> addTransaksi(String akunDocId) async {
     try {
       if (namaController.text.isEmpty ||
           namaController.text == "" ||
@@ -67,7 +66,7 @@ class _TambahPageState extends State<TambahPage> {
         'gambar': url,
         'uid': _auth.currentUser!.uid,
       });
-      updateSaldo();
+      updateSaldo(akunDocId);
       Navigator.pop(context);
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
@@ -93,8 +92,8 @@ class _TambahPageState extends State<TambahPage> {
     }
   }
 
-  Future<void> updateSaldo() {
-    var ref = _firestore.collection('akun').doc(widget.akunDocId);
+  Future<void> updateSaldo(String akunDocId) {
+    var ref = _firestore.collection('akun').doc(akunDocId);
 
     int saldo = int.parse(nominalController.text);
     if (!jenisController) {
@@ -105,6 +104,11 @@ class _TambahPageState extends State<TambahPage> {
 
   @override
   Widget build(BuildContext context) {
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final String akunDocId = arguments['akunDocId'];
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
@@ -272,7 +276,7 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        addTransaksi();
+                        addTransaksi(akunDocId);
                       },
                       child: Text('Tambah Transaksi', style: textButton),
                     ),

@@ -1,6 +1,4 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/view/home_view.dart';
-import 'package:catatan_keuangan/view/register_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
@@ -29,9 +27,7 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void toRegister() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return RegisterView();
-    }));
+    Navigator.pushNamed(context, '/register');
   }
 
   void login() async {
@@ -49,11 +45,7 @@ class _LoginViewState extends State<LoginView> {
         await _auth.signInWithEmailAndPassword(
             email: email, password: password);
 
-        navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) {
-            return HomeView();
-          }),
-        );
+        navigator.pushReplacementNamed('/home');
       }
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));

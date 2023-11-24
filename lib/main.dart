@@ -1,4 +1,9 @@
 import 'package:catatan_keuangan/firebase_options.dart';
+import 'package:catatan_keuangan/view/detail_view.dart';
+import 'package:catatan_keuangan/view/home_view.dart';
+import 'package:catatan_keuangan/view/register_view.dart';
+import 'package:catatan_keuangan/view/tambah_view.dart';
+import 'package:catatan_keuangan/view/update_view.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/view/login_view.dart';
@@ -21,7 +26,15 @@ class MainApp extends StatelessWidget {
       theme: ThemeData(
         fontFamily: 'Poppins',
       ),
-      home: LoginView(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginView(),
+        '/register': (context) => const RegisterView(),
+        '/home': (context) => const HomeView(),
+        '/tambah': (context) => const TambahPage(),
+        '/update': (context) => const UpdatePage(),
+        '/detail': (context) => const DetailPage(),
+      },
     );
   }
 }

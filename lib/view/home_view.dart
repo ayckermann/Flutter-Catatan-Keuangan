@@ -2,11 +2,9 @@ import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:catatan_keuangan/view/login_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:catatan_keuangan/view/tambah_view.dart';
 import 'package:catatan_keuangan/components/list_item.dart';
 
 class HomeView extends StatefulWidget {
@@ -38,11 +36,7 @@ class _HomeViewState extends State<HomeView> {
       print(e);
     }
 
-    navigator.pushReplacement(
-      MaterialPageRoute(builder: (context) {
-        return LoginView();
-      }),
-    );
+    navigator.pushReplacementNamed('/login');
   }
 
   Future<void> getAkun() async {
@@ -213,14 +207,8 @@ class _HomeViewState extends State<HomeView> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => TambahPage(
-                          akunDocId: akun.docId,
-                        ))).then((value) => setState(() {
-                  getAkun();
-                }));
+            Navigator.pushNamed(context, '/tambah',
+                arguments: {'akunDocId': akun.docId});
           },
           backgroundColor: primaryColor,
           shape:

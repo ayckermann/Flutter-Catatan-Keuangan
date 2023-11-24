@@ -13,14 +13,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class UpdatePage extends StatefulWidget {
-  final String akunDocId;
-  final String transaksiDocId;
-  final Transaksi transaksi;
-  const UpdatePage(
-      {super.key,
-      required this.transaksi,
-      required this.akunDocId,
-      required this.transaksiDocId});
+  const UpdatePage({
+    super.key,
+  });
 
   @override
   State<UpdatePage> createState() => _UpdatePageState();
@@ -41,7 +36,8 @@ class _UpdatePageState extends State<UpdatePage> {
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<void> updateTransaksi() async {
+  Future<void> updateTransaksi(
+      String akunDocId, String transaksiDocId, Transaksi transaksi) async {
     try {
       if (namaController.text.isEmpty ||
           namaController.text == "" ||
@@ -62,20 +58,22 @@ class _UpdatePageState extends State<UpdatePage> {
       // Convert DateTime to Firestore Timestamp
       Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      String url = await uploadImage();
+      String newUrl = await uploadImage(transaksi.gambar);
 
-      await transaksiCollection.doc(widget.transaksiDocId).update({
+      await transaksiCollection.doc(transaksiDocId).update({
         'nama': namaController.text,
         'tanggal': timestamp,
         'nominal': int.parse(nominalController.text),
         'jenis': jenisController,
         'kategori': kategoriController,
         'deskripsi': deskripsiController.text,
-        'gambar': url,
+        'gambar': newUrl,
         'uid': _auth.currentUser!.uid,
         // ignore: invalid_return_type_for_catch_error
       });
-      updateSaldo();
+
+      int deficitSaldo = int.parse(nominalController.text) - transaksi.nominal;
+      updateSaldo(akunDocId, deficitSaldo);
       Navigator.pop(context);
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
@@ -83,10 +81,10 @@ class _UpdatePageState extends State<UpdatePage> {
     }
   }
 
-  Future<String> uploadImage() async {
+  Future<String> uploadImage(String url) async {
     if (file == null) return '';
 
-    deleteOldImage();
+    deleteOldImage(url);
 
     String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -103,16 +101,14 @@ class _UpdatePageState extends State<UpdatePage> {
     }
   }
 
-  Future<void> deleteOldImage() async {
-    if (widget.transaksi.gambar != '') {
-      await _storage.refFromURL(widget.transaksi.gambar).delete();
+  Future<void> deleteOldImage(String url) async {
+    if (url != '') {
+      await _storage.refFromURL(url).delete();
     }
   }
 
-  Future<void> updateSaldo() {
-    var ref = _firestore.collection('akun').doc(widget.akunDocId);
-
-    int saldo = int.parse(nominalController.text) - widget.transaksi.nominal;
+  Future<void> updateSaldo(String akunDocId, int saldo) {
+    var ref = _firestore.collection('akun').doc(akunDocId);
 
     if (!jenisController) {
       saldo *= -1;
@@ -120,26 +116,31 @@ class _UpdatePageState extends State<UpdatePage> {
     return ref.update({'saldo': FieldValue.increment(saldo)});
   }
 
-  void setValue() async {
-    setState(() {
-      namaController.text = widget.transaksi.nama;
-      tanggalController.text = dateFormat.format(widget.transaksi.tanggal);
-      nominalController.text = widget.transaksi.nominal.toString();
-      jenisController = widget.transaksi.jenis;
-      kategoriController = widget.transaksi.kategori;
-      deskripsiController.text = widget.transaksi.deskripsi;
-    });
-  }
-
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    setValue();
+    // setValue();
   }
 
   @override
   Widget build(BuildContext context) {
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final Transaksi transaksi = arguments['transaksi'];
+    final String akunDocId = arguments['akunDocId'];
+    final String transaksiDocId = arguments['transaksiDocId'];
+
+    setState(() {
+      namaController.text = transaksi.nama;
+      tanggalController.text = dateFormat.format(transaksi.tanggal);
+      nominalController.text = transaksi.nominal.toString();
+      jenisController = transaksi.jenis;
+      kategoriController = transaksi.kategori;
+      deskripsiController.text = transaksi.deskripsi;
+    });
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
@@ -230,40 +231,40 @@ class _UpdatePageState extends State<UpdatePage> {
                         setState(() => jenisController = value as bool),
                   ),
                   SizedBox(height: 20),
-                  //dropdown katagori
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Kategori',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "Transfer Keluar",
-                        child: Text('Transfer Keluar', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Transfer Masuk",
-                        child: Text('Transfer Masuk', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tiket",
-                        child: Text('Tiket', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "TopUp",
-                        child: Text('TopUp', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tagihan",
-                        child: Text('Tagihan', style: textRegular),
-                      ),
-                    ],
-                    value: kategoriController,
-                    onChanged: (value) =>
-                        setState(() => kategoriController = value as String),
-                  ),
+                  // dropdown katagori
+                  // DropdownButtonFormField(
+                  //   decoration: const InputDecoration(
+                  //     hintText: 'Kategori',
+                  //     hintStyle: textRegular,
+                  //     border: OutlineInputBorder(
+                  //         borderRadius: BorderRadius.all(Radius.circular(10))),
+                  //   ),
+                  //   items: const [
+                  //     DropdownMenuItem(
+                  //       value: "Transfer Keluar",
+                  //       child: Text('Transfer Keluar', style: textRegular),
+                  //     ),
+                  //     DropdownMenuItem(
+                  //       value: "Transfer Masuk",
+                  //       child: Text('Transfer Masuk', style: textRegular),
+                  //     ),
+                  //     DropdownMenuItem(
+                  //       value: "Tiket",
+                  //       child: Text('Tiket', style: textRegular),
+                  //     ),
+                  //     DropdownMenuItem(
+                  //       value: "TopUp",
+                  //       child: Text('TopUp', style: textRegular),
+                  //     ),
+                  //     DropdownMenuItem(
+                  //       value: "Tagihan",
+                  //       child: Text('Tagihan', style: textRegular),
+                  //     ),
+                  //   ],
+                  //   value: kategoriController,
+                  //   onChanged: (value) =>
+                  //       setState(() => kategoriController = value as String),
+                  // ),
 
                   const SizedBox(height: 20),
                   TextField(
@@ -290,7 +291,7 @@ class _UpdatePageState extends State<UpdatePage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               SizedBox(height: 20),
-                              imagePreview(),
+                              imagePreview(transaksi.gambar),
                               Container(
                                 margin: EdgeInsets.all(20),
                                 width: 100,
@@ -326,7 +327,7 @@ class _UpdatePageState extends State<UpdatePage> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        updateTransaksi();
+                        updateTransaksi(akunDocId, transaksiDocId, transaksi);
                       },
                       child: Text('Edit Transaksi', style: textButton),
                     ),
@@ -340,12 +341,12 @@ class _UpdatePageState extends State<UpdatePage> {
     );
   }
 
-  Image imagePreview() {
+  Image imagePreview(String url) {
     if (file != null) {
       return Image.file(File(file!.path), width: 320, height: 180);
     } else {
-      if (widget.transaksi.gambar != '') {
-        return Image.network(widget.transaksi.gambar, width: 320, height: 180);
+      if (url != '') {
+        return Image.network(url, width: 320, height: 180);
       }
       return Image.asset('assets/image.png', width: 320, height: 180);
     }

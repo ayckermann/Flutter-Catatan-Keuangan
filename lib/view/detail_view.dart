@@ -1,24 +1,15 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
-import 'package:catatan_keuangan/view/update_view.dart';
 
 class DetailPage extends StatefulWidget {
-  final Transaksi transaksi;
-  final String transaksiDocId;
-  final String akunDocId;
-
   const DetailPage({
     super.key,
-    required this.transaksi,
-    required this.transaksiDocId,
-    required this.akunDocId,
   });
 
   @override
@@ -29,19 +20,23 @@ class _DetailPageState extends State<DetailPage> {
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  Future<void> delete() async {
-    await _firestore
-        .collection("transaksi")
-        .doc(widget.transaksiDocId)
-        .delete();
+  Future<void> delete(String transaksiDocId, Transaksi transaksi) async {
+    await _firestore.collection("transaksi").doc(transaksiDocId).delete();
 
-    if (widget.transaksi.gambar != '') {
-      await _storage.refFromURL(widget.transaksi.gambar).delete();
+    if (transaksi.gambar != '') {
+      await _storage.refFromURL(transaksi.gambar).delete();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final Transaksi transaksi = arguments['transaksi'];
+    final String akunDocId = arguments['akunDocId'];
+    final String transaksiDocId = arguments['transaksiDocId'];
+
     return Scaffold(
         appBar: AppBar(
             title: const Text('Detail Transaksi', style: titleAppBar),
@@ -59,7 +54,7 @@ class _DetailPageState extends State<DetailPage> {
             children: [
               Container(
                 margin: const EdgeInsets.only(top: 40),
-                child: widget.transaksi.jenis
+                child: transaksi.jenis
                     ? const Text('Transaksi Masuk',
                         textAlign: TextAlign.center, style: textBold)
                     : const Text('Transaksi Keluar',
@@ -68,11 +63,9 @@ class _DetailPageState extends State<DetailPage> {
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                child: widget.transaksi.gambar == ''
+                child: transaksi.gambar == ''
                     ? Image.asset('assets/no-picture.jpg')
-                    : Image.network(widget.transaksi.gambar
-                        // url,
-                        ),
+                    : Image.network(transaksi.gambar),
               ),
               Container(
                   decoration: const BoxDecoration(
@@ -81,10 +74,9 @@ class _DetailPageState extends State<DetailPage> {
                   ),
                   margin: const EdgeInsets.symmetric(vertical: 10),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text(numFormat.format(widget.transaksi.nominal),
+                  child: Text(numFormat.format(transaksi.nominal),
                       textAlign: TextAlign.center,
-                      style:
-                          widget.transaksi.jenis ? priceMasuk : priceKeluar)),
+                      style: transaksi.jenis ? priceMasuk : priceKeluar)),
               Container(
                 margin: const EdgeInsets.only(top: 10),
                 padding:
@@ -96,7 +88,7 @@ class _DetailPageState extends State<DetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.transaksi.nama,
+                          transaksi.nama,
                           style: const TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold),
                         ),
@@ -113,7 +105,7 @@ class _DetailPageState extends State<DetailPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                widget.transaksi.kategori,
+                                transaksi.kategori,
                                 style: const TextStyle(
                                     fontSize: 12, color: secondaryColor),
                               ),
@@ -129,7 +121,7 @@ class _DetailPageState extends State<DetailPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               child: Text(
-                                dateFormat.format(widget.transaksi.tanggal),
+                                dateFormat.format(transaksi.tanggal),
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ),
@@ -137,7 +129,7 @@ class _DetailPageState extends State<DetailPage> {
                         ),
                       ],
                     ),
-                    kategoriIcon(widget.transaksi.kategori),
+                    kategoriIcon(transaksi.kategori),
                   ],
                 ),
               ),
@@ -156,7 +148,7 @@ class _DetailPageState extends State<DetailPage> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    widget.transaksi.deskripsi,
+                    transaksi.deskripsi,
                     textAlign: TextAlign.start,
                     style: const TextStyle(fontSize: 14),
                   ),
@@ -177,16 +169,12 @@ class _DetailPageState extends State<DetailPage> {
                     child: TextButton(
                       onPressed: () {
                         //arahakan ke halaman detail
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UpdatePage(
-                              transaksi: widget.transaksi,
-                              akunDocId: widget.akunDocId,
-                              transaksiDocId: widget.transaksiDocId,
-                            ),
-                          ),
-                        );
+                        Navigator.pushReplacementNamed(context, '/update',
+                            arguments: {
+                              'akunDocId': akunDocId,
+                              'transaksi': transaksi,
+                              'transaksiDocId': transaksiDocId,
+                            });
                       },
                       child: const Text(
                         'Edit',
@@ -205,7 +193,7 @@ class _DetailPageState extends State<DetailPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: TextButton(
                       onPressed: () {
-                        delete();
+                        delete(transaksiDocId, transaksi);
                         Navigator.of(context).pop();
                       },
                       child: const Text(

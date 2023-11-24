@@ -1,5 +1,4 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/view/login_view.dart';
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -35,9 +34,7 @@ class _RegisterViewState extends State<RegisterView> {
   }
 
   void toLogin() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return LoginView();
-    }));
+    Navigator.pushNamed(context, '/login');
   }
 
   void register() async {

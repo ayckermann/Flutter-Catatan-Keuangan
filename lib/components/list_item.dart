@@ -1,13 +1,10 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:catatan_keuangan/view/detail_view.dart';
 import '../tools/styles.dart';
-import 'package:catatan_keuangan/view/update_view.dart';
 
 class ListItem extends StatefulWidget {
   final Transaksi transaksi;
@@ -85,16 +82,11 @@ class _ListItemState extends State<ListItem> {
             ),
           ),
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DetailPage(
-                  transaksi: widget.transaksi,
-                  transaksiDocId: widget.transaksiDocId,
-                  akunDocId: widget.akunDocId,
-                ),
-              ),
-            );
+            Navigator.pushNamed(context, '/detail', arguments: {
+              'akunDocId': widget.akunDocId,
+              'transaksi': widget.transaksi,
+              'transaksiDocId': widget.transaksiDocId,
+            });
           },
           onLongPress: () {
             showDialog(
@@ -106,23 +98,16 @@ class _ListItemState extends State<ListItem> {
                       TextButton(
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
-                          Navigator.pushReplacement(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: ((context) => UpdatePage(
-                                    transaksi: widget.transaksi,
-                                    akunDocId: widget.akunDocId,
-                                    transaksiDocId: widget.transaksiDocId,
-                                  )),
-                            ),
-                          ).then(
-                            (value) => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => HomeView(),
-                              ),
-                            ),
-                          );
+                            '/update',
+                            arguments: {
+                              'akunDocId': widget.akunDocId,
+                              'transaksi': widget.transaksi,
+                              'transaksiDocId': widget.transaksiDocId,
+                            },
+                          ).then((value) =>
+                              Navigator.pushReplacementNamed(context, '/home'));
                         },
                         child: Text('Edit'),
                       ),
