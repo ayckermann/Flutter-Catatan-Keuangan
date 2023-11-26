@@ -1,9 +1,10 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:catatan_keuangan/model/akun.dart';
+import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:date_time_picker/date_time_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,9 +18,7 @@ class TambahPage extends StatefulWidget {
 }
 
 class _TambahPageState extends State<TambahPage> {
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   TextEditingController namaController = TextEditingController();
   TextEditingController tanggalController = TextEditingController();
@@ -31,7 +30,7 @@ class _TambahPageState extends State<TambahPage> {
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<void> addTransaksi(String akunDocId) async {
+  Future<void> addTransaksi(Akun akun) async {
     try {
       if (namaController.text.isEmpty ||
           namaController.text == "" ||
@@ -43,63 +42,30 @@ class _TambahPageState extends State<TambahPage> {
           kategoriController == "") {
         throw ("Please fill requied field");
       }
-
-      CollectionReference transaksiCollection =
-          _firestore.collection('transaksi');
-
       // Parse the string to DateTime
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
-      // Convert DateTime to Firestore Timestamp
-      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
+      Transaksi transaksi = Transaksi(
+        nama: namaController.text,
+        tanggal: parsedDateTime,
+        nominal: int.parse(nominalController.text),
+        jenis: jenisController,
+        kategori: kategoriController,
+        deskripsi: deskripsiController.text,
+        gambar: '',
+      );
 
-      String url = await uploadImage();
-
-      await transaksiCollection.add({
-        'nama': namaController.text,
-        'tanggal': timestamp,
-        'nominal': int.parse(nominalController.text),
-        'jenis': jenisController,
-        'kategori': kategoriController,
-        'deskripsi': deskripsiController.text,
-        'gambar': url,
-        'uid': _auth.currentUser!.uid,
-      });
-      updateSaldo(akunDocId);
-      Navigator.pop(context);
+      final respond = await _firebaseHelper.addTransaksi(transaksi, akun, file);
+      if (respond == 'success') {
+        Navigator.popAndPushNamed(context, '/home');
+      } else {
+        throw respond;
+      }
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
-  }
-
-  Future<String> uploadImage() async {
-    if (file == null) return '';
-
-    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
-
-    Reference dirUpload =
-        _storage.ref().child('upload/${_auth.currentUser!.uid}');
-    Reference storedDir = dirUpload.child(uniqueFilename);
-
-    try {
-      await storedDir.putFile(File(file!.path));
-
-      return await storedDir.getDownloadURL();
-    } catch (e) {
-      return '';
-    }
-  }
-
-  Future<void> updateSaldo(String akunDocId) {
-    var ref = _firestore.collection('akun').doc(akunDocId);
-
-    int saldo = int.parse(nominalController.text);
-    if (!jenisController) {
-      saldo *= -1;
-    }
-    return ref.update({'saldo': FieldValue.increment(saldo)});
   }
 
   @override
@@ -107,7 +73,7 @@ class _TambahPageState extends State<TambahPage> {
     final arguments =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
-    final String akunDocId = arguments['akunDocId'];
+    final Akun akun = arguments['akun'];
 
     return Scaffold(
       appBar: AppBar(
@@ -115,7 +81,7 @@ class _TambahPageState extends State<TambahPage> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.popAndPushNamed(context, '/home');
           },
         ),
         title: const Text(
@@ -228,33 +194,6 @@ class _TambahPageState extends State<TambahPage> {
                     onChanged: (value) =>
                         setState(() => kategoriController = value as String),
                   ),
-                  SizedBox(height: 20),
-
-                  //masukan file
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      imagePreview(),
-                      IconButton(
-                        onPressed: () {
-                          uploadDialog(context);
-                        },
-                        icon: const Icon(Icons.attach_file),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.all<Color>(secondaryColor),
-                          foregroundColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 20),
                   TextField(
                     controller: deskripsiController,
@@ -266,6 +205,51 @@ class _TambahPageState extends State<TambahPage> {
                           borderRadius: BorderRadius.all(Radius.circular(10))),
                     ),
                   ),
+
+                  SizedBox(height: 20),
+
+                  //masukan file
+                  Container(
+                    width: double.infinity,
+                    child: DottedBorder(
+                      dashPattern: [6, 3, 0, 3],
+                      borderType: BorderType.RRect,
+                      radius: Radius.circular(10),
+                      color: Colors.black54,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(height: 20),
+                            imagePreview(),
+                            Container(
+                              margin: EdgeInsets.all(20),
+                              width: 100,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: const Color.fromRGBO(0, 150, 199, 1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: TextButton(
+                                onPressed: () {
+                                  uploadDialog(context);
+                                },
+                                child: Text(
+                                    file == null
+                                        ? 'Choose Image'
+                                        : 'Change Image',
+                                    style: TextStyle(
+                                        fontFamily: famSemi,
+                                        color: Colors.white,
+                                        fontSize: 10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 50),
                   Container(
                     width: double.infinity,
@@ -276,7 +260,7 @@ class _TambahPageState extends State<TambahPage> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        addTransaksi(akunDocId);
+                        addTransaksi(akun);
                       },
                       child: Text('Tambah Transaksi', style: textButton),
                     ),
@@ -292,7 +276,7 @@ class _TambahPageState extends State<TambahPage> {
 
   Image imagePreview() {
     if (file == null) {
-      return Image.asset('assets/no-picture.jpg', width: 200, height: 200);
+      return Image.asset('assets/image.png', width: 200, height: 200);
     } else {
       return Image.file(File(file!.path), width: 200, height: 200);
     }

@@ -1,8 +1,8 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
+import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
@@ -17,14 +17,16 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
-  final _firestore = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
-  Future<void> delete(String transaksiDocId, Transaksi transaksi) async {
-    await _firestore.collection("transaksi").doc(transaksiDocId).delete();
+  void delete(Transaksi transaksi) async {
+    final respond = await _firebaseHelper.deleteTransaksi(transaksi);
 
-    if (transaksi.gambar != '') {
-      await _storage.refFromURL(transaksi.gambar).delete();
+    if (respond == 'success') {
+      Navigator.popAndPushNamed(context, '/home');
+    } else {
+      final snackbar = SnackBar(content: Text(respond));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
   }
 
@@ -34,8 +36,7 @@ class _DetailPageState extends State<DetailPage> {
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
     final Transaksi transaksi = arguments['transaksi'];
-    final String akunDocId = arguments['akunDocId'];
-    final String transaksiDocId = arguments['transaksiDocId'];
+    final Akun akun = arguments['akun'];
 
     return Scaffold(
         appBar: AppBar(
@@ -45,7 +46,7 @@ class _DetailPageState extends State<DetailPage> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.popAndPushNamed(context, '/home');
               },
             )),
         body: SingleChildScrollView(
@@ -170,11 +171,7 @@ class _DetailPageState extends State<DetailPage> {
                       onPressed: () {
                         //arahakan ke halaman detail
                         Navigator.pushReplacementNamed(context, '/update',
-                            arguments: {
-                              'akunDocId': akunDocId,
-                              'transaksi': transaksi,
-                              'transaksiDocId': transaksiDocId,
-                            });
+                            arguments: {'transaksi': transaksi, 'akun': akun});
                       },
                       child: const Text(
                         'Edit',
@@ -193,8 +190,7 @@ class _DetailPageState extends State<DetailPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: TextButton(
                       onPressed: () {
-                        delete(transaksiDocId, transaksi);
-                        Navigator.of(context).pop();
+                        delete(transaksi);
                       },
                       child: const Text(
                         'Hapus',

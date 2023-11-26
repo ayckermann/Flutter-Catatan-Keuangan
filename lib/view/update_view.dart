@@ -1,12 +1,11 @@
 import 'dart:io';
 
+import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_picker/date_time_picker.dart';
 import 'package:dotted_border/dotted_border.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,9 +21,7 @@ class UpdatePage extends StatefulWidget {
 }
 
 class _UpdatePageState extends State<UpdatePage> {
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   TextEditingController namaController = TextEditingController();
   TextEditingController tanggalController = TextEditingController();
@@ -36,8 +33,7 @@ class _UpdatePageState extends State<UpdatePage> {
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<void> updateTransaksi(
-      String akunDocId, String transaksiDocId, Transaksi transaksi) async {
+  Future<void> updateTransaksi(Transaksi transaksi, Akun akun) async {
     try {
       if (namaController.text.isEmpty ||
           namaController.text == "" ||
@@ -49,78 +45,38 @@ class _UpdatePageState extends State<UpdatePage> {
           kategoriController == "") {
         throw ("Please fill requied field");
       }
-      CollectionReference transaksiCollection =
-          _firestore.collection('transaksi');
-      // Parse the string to DateTime
+
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
-      // Convert DateTime to Firestore Timestamp
-      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
+      Transaksi editTransaksi = Transaksi(
+        nama: namaController.text,
+        tanggal: parsedDateTime,
+        nominal: int.parse(nominalController.text),
+        jenis: jenisController,
+        kategori: kategoriController,
+        deskripsi: deskripsiController.text,
+        gambar: transaksi.gambar,
+        docId: transaksi.docId,
+      );
 
-      String newUrl = await uploadImage(transaksi.gambar);
-
-      await transaksiCollection.doc(transaksiDocId).update({
-        'nama': namaController.text,
-        'tanggal': timestamp,
-        'nominal': int.parse(nominalController.text),
-        'jenis': jenisController,
-        'kategori': kategoriController,
-        'deskripsi': deskripsiController.text,
-        'gambar': newUrl,
-        'uid': _auth.currentUser!.uid,
-        // ignore: invalid_return_type_for_catch_error
-      });
-
-      int deficitSaldo = int.parse(nominalController.text) - transaksi.nominal;
-      updateSaldo(akunDocId, deficitSaldo);
-      Navigator.pop(context);
+      final respond = await _firebaseHelper.updateTransaksi(
+          editTransaksi, akun, file, transaksi.nominal);
+      if (respond == 'success') {
+        Navigator.popAndPushNamed(context, '/home');
+      } else {
+        throw respond;
+      }
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
   }
 
-  Future<String> uploadImage(String url) async {
-    if (file == null) return '';
-
-    deleteOldImage(url);
-
-    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
-
-    Reference dirUpload =
-        _storage.ref().child('upload/${_auth.currentUser!.uid}');
-    Reference storedDir = dirUpload.child(uniqueFilename);
-
-    try {
-      await storedDir.putFile(File(file!.path));
-
-      return await storedDir.getDownloadURL();
-    } catch (e) {
-      return '';
-    }
-  }
-
-  Future<void> deleteOldImage(String url) async {
-    if (url != '') {
-      await _storage.refFromURL(url).delete();
-    }
-  }
-
-  Future<void> updateSaldo(String akunDocId, int saldo) {
-    var ref = _firestore.collection('akun').doc(akunDocId);
-
-    if (!jenisController) {
-      saldo *= -1;
-    }
-    return ref.update({'saldo': FieldValue.increment(saldo)});
-  }
-
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    // setValue();
   }
 
   @override
@@ -129,8 +85,7 @@ class _UpdatePageState extends State<UpdatePage> {
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
     final Transaksi transaksi = arguments['transaksi'];
-    final String akunDocId = arguments['akunDocId'];
-    final String transaksiDocId = arguments['transaksiDocId'];
+    final Akun akun = arguments['akun'];
 
     setState(() {
       namaController.text = transaksi.nama;
@@ -147,7 +102,7 @@ class _UpdatePageState extends State<UpdatePage> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.popAndPushNamed(context, '/home');
           },
         ),
         title: const Text(
@@ -232,39 +187,39 @@ class _UpdatePageState extends State<UpdatePage> {
                   ),
                   SizedBox(height: 20),
                   // dropdown katagori
-                  // DropdownButtonFormField(
-                  //   decoration: const InputDecoration(
-                  //     hintText: 'Kategori',
-                  //     hintStyle: textRegular,
-                  //     border: OutlineInputBorder(
-                  //         borderRadius: BorderRadius.all(Radius.circular(10))),
-                  //   ),
-                  //   items: const [
-                  //     DropdownMenuItem(
-                  //       value: "Transfer Keluar",
-                  //       child: Text('Transfer Keluar', style: textRegular),
-                  //     ),
-                  //     DropdownMenuItem(
-                  //       value: "Transfer Masuk",
-                  //       child: Text('Transfer Masuk', style: textRegular),
-                  //     ),
-                  //     DropdownMenuItem(
-                  //       value: "Tiket",
-                  //       child: Text('Tiket', style: textRegular),
-                  //     ),
-                  //     DropdownMenuItem(
-                  //       value: "TopUp",
-                  //       child: Text('TopUp', style: textRegular),
-                  //     ),
-                  //     DropdownMenuItem(
-                  //       value: "Tagihan",
-                  //       child: Text('Tagihan', style: textRegular),
-                  //     ),
-                  //   ],
-                  //   value: kategoriController,
-                  //   onChanged: (value) =>
-                  //       setState(() => kategoriController = value as String),
-                  // ),
+                  DropdownButtonFormField(
+                    decoration: const InputDecoration(
+                      hintText: 'Kategori',
+                      hintStyle: textRegular,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10))),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: "Transfer Keluar",
+                        child: Text('Transfer Keluar', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "Transfer Masuk",
+                        child: Text('Transfer Masuk', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "Tiket",
+                        child: Text('Tiket', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "TopUp",
+                        child: Text('TopUp', style: textRegular),
+                      ),
+                      DropdownMenuItem(
+                        value: "Tagihan",
+                        child: Text('Tagihan', style: textRegular),
+                      ),
+                    ],
+                    value: kategoriController,
+                    onChanged: (value) =>
+                        setState(() => kategoriController = value as String),
+                  ),
 
                   const SizedBox(height: 20),
                   TextField(
@@ -280,40 +235,42 @@ class _UpdatePageState extends State<UpdatePage> {
                   SizedBox(height: 20),
                   //masukkan file
                   Container(
+                    width: double.infinity,
                     child: DottedBorder(
                       dashPattern: [6, 3, 0, 3],
                       borderType: BorderType.RRect,
                       radius: Radius.circular(10),
                       color: Colors.black54,
-                      child: Row(
-                        children: [
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              SizedBox(height: 20),
-                              imagePreview(transaksi.gambar),
-                              Container(
-                                margin: EdgeInsets.all(20),
-                                width: 100,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: const Color.fromRGBO(0, 150, 199, 1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: TextButton(
-                                  onPressed: () {
-                                    uploadDialog(context);
-                                  },
-                                  child: Text('Choose Image',
-                                      style: TextStyle(
-                                          fontFamily: famSemi,
-                                          color: Colors.white,
-                                          fontSize: 10)),
-                                ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SizedBox(height: 20),
+                            imagePreview(transaksi.gambar),
+                            Container(
+                              margin: EdgeInsets.all(20),
+                              width: 100,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: const Color.fromRGBO(0, 150, 199, 1),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                            ],
-                          ),
-                        ],
+                              child: TextButton(
+                                onPressed: () {
+                                  uploadDialog(context);
+                                },
+                                child: Text(
+                                    file == null
+                                        ? 'Choose Image'
+                                        : 'Change Image',
+                                    style: TextStyle(
+                                        fontFamily: famSemi,
+                                        color: Colors.white,
+                                        fontSize: 10)),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -327,7 +284,7 @@ class _UpdatePageState extends State<UpdatePage> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        updateTransaksi(akunDocId, transaksiDocId, transaksi);
+                        updateTransaksi(transaksi, akun);
                       },
                       child: Text('Edit Transaksi', style: textButton),
                     ),

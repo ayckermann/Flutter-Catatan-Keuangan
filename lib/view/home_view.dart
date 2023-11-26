@@ -1,9 +1,8 @@
 import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/components/list_item.dart';
 
@@ -17,8 +16,7 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   Akun akun = Akun(
     uid: '',
@@ -27,62 +25,45 @@ class _HomeViewState extends State<HomeView> {
     email: '',
     docId: '',
   ); // null safety sebelum fetch dari firebase di initState
+  List<Transaksi> listTransaksi = [];
 
   void logout() async {
     final navigator = Navigator.of(context);
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      print(e);
-    }
+    final scaffold = ScaffoldMessenger.of(context);
 
-    navigator.pushReplacementNamed('/login');
-  }
-
-  Future<void> getAkun() async {
-    final User? user = _auth.currentUser;
     try {
-      QuerySnapshot querySnapshot = await _firestore
-          .collection('akun')
-          .where('uid', isEqualTo: user!.uid)
-          .get();
-      if (querySnapshot.docs.isNotEmpty) {
-        var userData = querySnapshot.docs.first.data() as Map<String, dynamic>;
-        setState(() {
-          akun = Akun(
-              uid: userData['uid'],
-              nama: userData['nama'],
-              saldo: userData['saldo'],
-              email: userData['email'],
-              docId: userData['docId']);
-        });
+      String respond = await _firebaseHelper.logout();
+
+      if (respond == 'success') {
+        navigator.pushReplacementNamed('/login');
       } else {
-        print('Document not found!');
+        throw respond;
       }
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
-      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+      scaffold.showSnackBar(snackbar);
     }
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> getTransaksi() {
-    try {
-      return _firestore
-          .collection('transaksi')
-          .where('uid', isEqualTo: akun.uid)
-          .orderBy('tanggal', descending: true)
-          .snapshots();
-    } catch (e) {
-      final snackbar = SnackBar(content: Text(e.toString()));
-      ScaffoldMessenger.of(context).showSnackBar(snackbar);
-      return Stream.error(e);
-    }
+  Future<void> getAkun() async {
+    final respond = await _firebaseHelper.getAkun();
+    setState(() {
+      akun = respond;
+    });
+  }
+
+  Future<void> getTransaksi() async {
+    final respond = await _firebaseHelper.getListTransaksi();
+    setState(() {
+      listTransaksi = respond;
+    });
   }
 
   @override
   void initState() {
     super.initState();
     getAkun();
+    getTransaksi();
   }
 
   @override
@@ -106,9 +87,7 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ),
                     IconButton(
-                      onPressed: () {
-                        logout();
-                      },
+                      onPressed: logout,
                       icon: const Icon(
                         Icons.logout_rounded,
                         color: headerColor,
@@ -157,49 +136,16 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 const SizedBox(height: 25),
                 Expanded(
-                  child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: getTransaksi(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        List<Transaksi> listTransaksi =
-                            snapshot.data!.docs.map((document) {
-                          final data = document.data();
-                          final String nama = data['nama'];
-                          final DateTime tanggal = data['tanggal'].toDate();
-                          final int nominal = data['nominal'];
-                          final bool jenis = data['jenis'];
-                          final String kategori = data['kategori'];
-
-                          final String deskripsi = data['deskripsi'] ?? '';
-                          final String gambar = data['gambar'] ?? '';
-
-                          return Transaksi(
-                            nama: nama,
-                            tanggal: tanggal,
-                            nominal: nominal,
-                            jenis: jenis,
-                            kategori: kategori,
-                            deskripsi: deskripsi,
-                            gambar: gambar,
-                          );
-                        }).toList();
-
-                        return ListView.builder(
-                          itemCount: listTransaksi.length,
-                          padding: const EdgeInsets.all(10),
-                          itemBuilder: (context, index) {
-                            return ListItem(
-                              transaksi: listTransaksi[index],
-                              transaksiDocId: snapshot.data!.docs[index].id,
-                              akunDocId: akun.docId,
-                            );
-                          },
-                        );
-                      }),
+                  child: ListView.builder(
+                    itemCount: listTransaksi.length,
+                    padding: const EdgeInsets.all(10),
+                    itemBuilder: (context, index) {
+                      return ListItem(
+                        transaksi: listTransaksi[index],
+                        akun: akun,
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -207,8 +153,8 @@ class _HomeViewState extends State<HomeView> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            Navigator.pushNamed(context, '/tambah',
-                arguments: {'akunDocId': akun.docId});
+            Navigator.popAndPushNamed(context, '/tambah',
+                arguments: {'akun': akun});
           },
           backgroundColor: primaryColor,
           shape:

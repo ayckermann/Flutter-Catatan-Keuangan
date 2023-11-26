@@ -1,21 +1,20 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
+import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
 
 class ListItem extends StatefulWidget {
   final Transaksi transaksi;
-  final String transaksiDocId;
-  final String akunDocId;
+  final Akun akun;
 
-  const ListItem({
+  ListItem({
     super.key,
     required this.transaksi,
-    required this.transaksiDocId,
-    required this.akunDocId,
+    required this.akun,
   });
 
   @override
@@ -23,21 +22,15 @@ class ListItem extends StatefulWidget {
 }
 
 class _ListItemState extends State<ListItem> {
-  final _firestore = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
-  Future<void> delete() async {
-    try {
-      await _firestore
-          .collection("transaksi")
-          .doc(widget.transaksiDocId)
-          .delete();
+  void delete() async {
+    final respond = await _firebaseHelper.deleteTransaksi(widget.transaksi);
 
-      if (widget.transaksi.gambar != '') {
-        await _storage.refFromURL(widget.transaksi.gambar).delete();
-      }
-    } catch (e) {
-      final snackbar = SnackBar(content: Text(e.toString()));
+    if (respond == 'success') {
+      Navigator.popAndPushNamed(context, '/home');
+    } else {
+      final snackbar = SnackBar(content: Text(respond));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
   }
@@ -82,10 +75,9 @@ class _ListItemState extends State<ListItem> {
             ),
           ),
           onTap: () {
-            Navigator.pushNamed(context, '/detail', arguments: {
-              'akunDocId': widget.akunDocId,
+            Navigator.popAndPushNamed(context, '/detail', arguments: {
               'transaksi': widget.transaksi,
-              'transaksiDocId': widget.transaksiDocId,
+              'akun': widget.akun,
             });
           },
           onLongPress: () {
@@ -98,25 +90,19 @@ class _ListItemState extends State<ListItem> {
                       TextButton(
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
-                          Navigator.pushNamed(
+                          Navigator.popAndPushNamed(
                             context,
                             '/update',
                             arguments: {
-                              'akunDocId': widget.akunDocId,
                               'transaksi': widget.transaksi,
-                              'transaksiDocId': widget.transaksiDocId,
+                              'akun': widget.akun,
                             },
-                          ).then((value) =>
-                              Navigator.pushReplacementNamed(context, '/home'));
+                          );
                         },
                         child: Text('Edit'),
                       ),
                       TextButton(
-                        onPressed: () {
-                          delete();
-
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: delete,
                         child: Text('Hapus'),
                       ),
                     ],

@@ -1,5 +1,6 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
+
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 
@@ -13,7 +14,8 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
-  final _auth = FirebaseAuth.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+
   bool _isLoading = false;
 
   bool passwordVisible = false;
@@ -36,16 +38,18 @@ class _LoginViewState extends State<LoginView> {
     });
 
     try {
-      final navigator = Navigator.of(context);
-      final email = _emailController.text;
-      final password = _passwordController.text;
-      if (email.isEmpty || password.isEmpty) {
+      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
         throw ("Please fill all fields");
-      } else {
-        await _auth.signInWithEmailAndPassword(
-            email: email, password: password);
+      }
+      String respond = await _firebaseHelper.login(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
-        navigator.pushReplacementNamed('/home');
+      if (respond == 'success') {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        throw respond;
       }
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
@@ -108,8 +112,10 @@ class _LoginViewState extends State<LoginView> {
                                   }),
                               SizedBox(height: 30),
                               ButtonAuth(
+                                  onPressed: () {
+                                    login();
+                                  },
                                   label: "LOGIN",
-                                  onPressed: login,
                                   fgColor: Colors.white,
                                   bgColor: headerColor),
                               const Divider(

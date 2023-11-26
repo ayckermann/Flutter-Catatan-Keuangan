@@ -6,6 +6,7 @@ class Transaksi {
   final String kategori;
   final String deskripsi;
   final String gambar;
+  final String docId;
 
   Transaksi({
     required this.nama,
@@ -15,5 +16,6 @@ class Transaksi {
     required this.kategori,
     this.deskripsi = '',
     this.gambar = '',
+    this.docId = '',
   });
 }

@@ -1,8 +1,7 @@
 import 'package:catatan_keuangan/components/input_components.dart';
+import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({
@@ -14,7 +13,7 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView> {
-  final _auth = FirebaseAuth.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   bool _isLoading = false;
 
@@ -41,39 +40,31 @@ class _RegisterViewState extends State<RegisterView> {
     setState(() {
       _isLoading = true;
     });
+
     try {
-      CollectionReference akunCollection =
-          FirebaseFirestore.instance.collection('akun');
-
-      final navigator = Navigator.of(context);
-
-      final nama = nameController.text;
-      final email = emailController.text;
-      final password = passwordController.text;
-      final confirmPassword = confirmPasswordController.text;
-
-      if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      if (nameController.text.isEmpty ||
+          emailController.text.isEmpty ||
+          passwordController.text.isEmpty ||
+          confirmPasswordController.text.isEmpty) {
         throw ("Please fill all fields");
       } else {
-        if (password != confirmPassword) {
+        if (passwordController.text != confirmPasswordController.text) {
           throw ("Password and confirm password must be same");
-        } else if (password.length < 6) {
+        } else if (passwordController.text.length < 6) {
           throw ("Password must be at least 6 characters");
-        } else {
-          await _auth.createUserWithEmailAndPassword(
-              email: email, password: password);
+        }
 
-          await akunCollection.add({
-            'uid': _auth.currentUser!.uid,
-            'nama': nama,
-            'email': email,
-            'saldo': 0,
-            'docId': akunCollection.id,
-            // ignore: invalid_return_type_for_catch_error
-          }).catchError((error) => print("Failed to add user: $error"));
+        String respond = await _firebaseHelper.register(
+          nama: nameController.text,
+          email: emailController.text,
+          password: passwordController.text,
+          confirmPassword: confirmPasswordController.text,
+        );
+
+        if (respond == 'success') {
+          Navigator.pushReplacementNamed(context, '/login');
         }
       }
-      navigator.pop();
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
