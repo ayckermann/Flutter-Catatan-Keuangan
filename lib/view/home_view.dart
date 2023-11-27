@@ -18,6 +18,8 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
+  bool _isLoading = false;
+
   Akun akun = Akun(
     uid: '',
     nama: '',
@@ -30,6 +32,9 @@ class _HomeViewState extends State<HomeView> {
   void logout() async {
     final navigator = Navigator.of(context);
     final scaffold = ScaffoldMessenger.of(context);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       String respond = await _firebaseHelper.logout();
@@ -42,21 +47,49 @@ class _HomeViewState extends State<HomeView> {
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       scaffold.showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> getAkun() async {
-    final respond = await _firebaseHelper.getAkun();
     setState(() {
-      akun = respond;
+      _isLoading = true;
     });
+    try {
+      final respond = await _firebaseHelper.getAkun();
+      setState(() {
+        akun = respond;
+      });
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> getTransaksi() async {
-    final respond = await _firebaseHelper.getListTransaksi();
     setState(() {
-      listTransaksi = respond;
+      _isLoading = true;
     });
+    try {
+      final respond = await _firebaseHelper.getListTransaksi();
+      setState(() {
+        listTransaksi = respond;
+      });
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -71,85 +104,89 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-          child: Container(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Hi ${akun.nama}!",
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 20,
-                        fontFamily: 'Poppins-bold',
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: logout,
-                      icon: const Icon(
-                        Icons.logout_rounded,
-                        color: headerColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                Container(
-                  alignment: Alignment.topLeft,
-                  child: const Text(
-                    'Catatan Keuangan',
-                    style: TextStyle(
-                        color: headerColor, fontSize: 20, fontFamily: famBold),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Container(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Container(
                   padding: EdgeInsets.all(20),
-                  height: 170,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: headerColor),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Saldo anda saat ini',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontFamily: famSemi,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Hi ${akun.nama}!",
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 20,
+                              fontFamily: 'Poppins-bold',
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: logout,
+                            icon: const Icon(
+                              Icons.logout_rounded,
+                              color: headerColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      Container(
+                        alignment: Alignment.topLeft,
+                        child: const Text(
+                          'Catatan Keuangan',
+                          style: TextStyle(
+                              color: headerColor,
+                              fontSize: 20,
+                              fontFamily: famBold),
                         ),
                       ),
-                      Text(
-                        numFormat.format(akun.saldo),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 35,
-                          fontFamily: 'Poppins-bold',
+                      const SizedBox(height: 15),
+                      Container(
+                        padding: EdgeInsets.all(20),
+                        height: 170,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            color: headerColor),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Saldo anda saat ini',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontFamily: famSemi,
+                              ),
+                            ),
+                            Text(
+                              numFormat.format(akun.saldo),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 35,
+                                fontFamily: 'Poppins-bold',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: listTransaksi.length,
+                          padding: const EdgeInsets.all(10),
+                          itemBuilder: (context, index) {
+                            return ListItem(
+                              transaksi: listTransaksi[index],
+                              akun: akun,
+                            );
+                          },
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 25),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: listTransaksi.length,
-                    padding: const EdgeInsets.all(10),
-                    itemBuilder: (context, index) {
-                      return ListItem(
-                        transaksi: listTransaksi[index],
-                        akun: akun,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {

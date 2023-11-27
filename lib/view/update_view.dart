@@ -22,6 +22,7 @@ class UpdatePage extends StatefulWidget {
 
 class _UpdatePageState extends State<UpdatePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  bool _isLoading = false;
 
   TextEditingController namaController = TextEditingController();
   TextEditingController tanggalController = TextEditingController();
@@ -34,6 +35,9 @@ class _UpdatePageState extends State<UpdatePage> {
   XFile? file;
 
   Future<void> updateTransaksi(Transaksi transaksi, Akun akun) async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
       if (namaController.text.isEmpty ||
           namaController.text == "" ||
@@ -70,6 +74,10 @@ class _UpdatePageState extends State<UpdatePage> {
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -111,190 +119,202 @@ class _UpdatePageState extends State<UpdatePage> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-          child: Column(
-            children: [
-              const Text(
-                'Update Transaksi',
-                style: textBold,
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-              Column(
-                children: [
-                  TextField(
-                    controller: namaController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nama Transaksi',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Update Transaksi',
+                      style: textBold,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  DateTimePicker(
-                    type: DateTimePickerType.dateTime,
-                    dateMask: 'MMMM dd, yyyy hh:mm a',
-                    controller: tanggalController,
-                    decoration: const InputDecoration(
-                      hintText: 'Tanggal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.calendar_today),
+                    const SizedBox(
+                      height: 30,
                     ),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime.now(),
-                  ),
+                    Column(
+                      children: [
+                        TextField(
+                          controller: namaController,
+                          decoration: const InputDecoration(
+                            hintText: 'Nama Transaksi',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        DateTimePicker(
+                          type: DateTimePickerType.dateTime,
+                          dateMask: 'MMMM dd, yyyy hh:mm a',
+                          controller: tanggalController,
+                          decoration: const InputDecoration(
+                            hintText: 'Tanggal',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            suffixIcon: Icon(Icons.calendar_today),
+                          ),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        ),
 
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: nominalController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Nominal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.attach_money),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  //dropdown katagori
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Jenis',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: true,
-                        child: Text('Pemasukan', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: false,
-                        child: Text('Pengeluaran', style: textRegular),
-                      )
-                    ],
-                    value: jenisController,
-                    onChanged: (value) =>
-                        setState(() => jenisController = value as bool),
-                  ),
-                  SizedBox(height: 20),
-                  // dropdown katagori
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Kategori',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "Transfer Keluar",
-                        child: Text('Transfer Keluar', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Transfer Masuk",
-                        child: Text('Transfer Masuk', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tiket",
-                        child: Text('Tiket', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "TopUp",
-                        child: Text('TopUp', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tagihan",
-                        child: Text('Tagihan', style: textRegular),
-                      ),
-                    ],
-                    value: kategoriController,
-                    onChanged: (value) =>
-                        setState(() => kategoriController = value as String),
-                  ),
-
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: deskripsiController,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      hintText: 'Deskripsi',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  //masukkan file
-                  Container(
-                    width: double.infinity,
-                    child: DottedBorder(
-                      dashPattern: [6, 3, 0, 3],
-                      borderType: BorderType.RRect,
-                      radius: Radius.circular(10),
-                      color: Colors.black54,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            SizedBox(height: 20),
-                            imagePreview(transaksi.gambar),
-                            Container(
-                              margin: EdgeInsets.all(20),
-                              width: 100,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: const Color.fromRGBO(0, 150, 199, 1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: TextButton(
-                                onPressed: () {
-                                  uploadDialog(context);
-                                },
-                                child: Text(
-                                    file == null
-                                        ? 'Choose Image'
-                                        : 'Change Image',
-                                    style: TextStyle(
-                                        fontFamily: famSemi,
-                                        color: Colors.white,
-                                        fontSize: 10)),
-                              ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: nominalController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Nominal',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            suffixIcon: Icon(Icons.attach_money),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        //dropdown katagori
+                        DropdownButtonFormField(
+                          decoration: const InputDecoration(
+                            hintText: 'Jenis',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: true,
+                              child: Text('Pemasukan', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: false,
+                              child: Text('Pengeluaran', style: textRegular),
+                            )
+                          ],
+                          value: jenisController,
+                          onChanged: (value) =>
+                              setState(() => jenisController = value as bool),
+                        ),
+                        SizedBox(height: 20),
+                        // dropdown katagori
+                        DropdownButtonFormField(
+                          decoration: const InputDecoration(
+                            hintText: 'Kategori',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "Transfer Keluar",
+                              child:
+                                  Text('Transfer Keluar', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Transfer Masuk",
+                              child: Text('Transfer Masuk', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Tiket",
+                              child: Text('Tiket', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "TopUp",
+                              child: Text('TopUp', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Tagihan",
+                              child: Text('Tagihan', style: textRegular),
                             ),
                           ],
+                          value: kategoriController,
+                          onChanged: (value) => setState(
+                              () => kategoriController = value as String),
                         ),
-                      ),
+
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: deskripsiController,
+                          maxLines: 5,
+                          decoration: const InputDecoration(
+                            hintText: 'Deskripsi',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        //masukkan file
+                        Container(
+                          width: double.infinity,
+                          child: DottedBorder(
+                            dashPattern: [6, 3, 0, 3],
+                            borderType: BorderType.RRect,
+                            radius: Radius.circular(10),
+                            color: Colors.black54,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  SizedBox(height: 20),
+                                  imagePreview(transaksi.gambar),
+                                  Container(
+                                    margin: EdgeInsets.all(20),
+                                    width: 100,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          const Color.fromRGBO(0, 150, 199, 1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: TextButton(
+                                      onPressed: () {
+                                        uploadDialog(context);
+                                      },
+                                      child: const Text(
+                                        'Choose Image',
+                                        style: TextStyle(
+                                          fontFamily: famSemi,
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 50),
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color.fromRGBO(0, 150, 199, 1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              updateTransaksi(transaksi, akun);
+                            },
+                            child: Text('Edit Transaksi', style: textButton),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                  Container(
-                    width: double.infinity,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color.fromRGBO(0, 150, 199, 1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: TextButton(
-                      onPressed: () {
-                        updateTransaksi(transaksi, akun);
-                      },
-                      child: Text('Edit Transaksi', style: textButton),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
