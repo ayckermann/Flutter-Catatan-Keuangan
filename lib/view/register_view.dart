@@ -1,9 +1,8 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/view/login_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({
@@ -16,6 +15,7 @@ class RegisterView extends StatefulWidget {
 
 class _RegisterViewState extends State<RegisterView> {
   final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
 
@@ -35,48 +35,54 @@ class _RegisterViewState extends State<RegisterView> {
   }
 
   void toLogin() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return LoginView();
-    }));
+    Navigator.pushNamed(context, '/login');
   }
 
   void register() async {
     setState(() {
       _isLoading = true;
     });
+
     try {
-      CollectionReference akunCollection =
-          FirebaseFirestore.instance.collection('akun');
+      String nama = nameController.text;
+      String email = emailController.text;
+      String password = passwordController.text;
+      String confirmPassword = confirmPasswordController.text;
 
-      final navigator = Navigator.of(context);
-
-      final nama = nameController.text;
-      final email = emailController.text;
-      final password = passwordController.text;
-      final confirmPassword = confirmPasswordController.text;
-
-      if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      if (nama.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty ||
+          confirmPassword.isEmpty) {
         throw ("Please fill all fields");
       } else {
-        if (password != confirmPassword) {
+        if (passwordController.text != confirmPasswordController.text) {
           throw ("Password and confirm password must be same");
-        } else if (password.length < 6) {
+        } else if (passwordController.text.length < 6) {
           throw ("Password must be at least 6 characters");
-        } else {
-          await _auth.createUserWithEmailAndPassword(
-              email: email, password: password);
-
-          await akunCollection.add({
-            'uid': _auth.currentUser!.uid,
-            'nama': nama,
-            'email': email,
-            'saldo': 0,
-            'docId': akunCollection.id,
-            // ignore: invalid_return_type_for_catch_error
-          }).catchError((error) => print("Failed to add user: $error"));
         }
+
+        CollectionReference akunCollection = _firestore.collection('akun');
+
+        await _auth
+            .createUserWithEmailAndPassword(email: email, password: password)
+            .catchError((e) {
+          throw (e);
+        });
+
+        final id = akunCollection.doc().id;
+
+        await akunCollection.doc(id).set({
+          'uid': _auth.currentUser!.uid,
+          'nama': nama,
+          'email': email,
+          'saldo': 0,
+          'docId': id,
+        }).catchError((e) {
+          throw (e);
+        });
+
+        Navigator.pushReplacementNamed(context, '/login');
       }
-      navigator.pop();
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);

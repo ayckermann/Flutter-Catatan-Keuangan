@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,14 +14,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class UpdatePage extends StatefulWidget {
-  final String akunDocId;
-  final String transaksiDocId;
-  final Transaksi transaksi;
-  const UpdatePage(
-      {super.key,
-      required this.transaksi,
-      required this.akunDocId,
-      required this.transaksiDocId});
+  const UpdatePage({
+    super.key,
+  });
 
   @override
   State<UpdatePage> createState() => _UpdatePageState();
@@ -30,6 +26,8 @@ class _UpdatePageState extends State<UpdatePage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
+
+  bool _isLoading = false;
 
   TextEditingController namaController = TextEditingController();
   TextEditingController tanggalController = TextEditingController();
@@ -41,52 +39,99 @@ class _UpdatePageState extends State<UpdatePage> {
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<void> updateTransaksi() async {
+  Future<void> updateTransaksi(Transaksi transaksi, Akun akun) async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
-      if (namaController.text.isEmpty ||
-          namaController.text == "" ||
-          tanggalController.text.isEmpty ||
-          tanggalController.text == "" ||
-          nominalController.text.isEmpty ||
-          nominalController.text == "" ||
-          kategoriController.isEmpty ||
-          kategoriController == "") {
+      String nama = namaController.text;
+      String tanggal = tanggalController.text;
+      String nominal = nominalController.text;
+      String kategori = kategoriController;
+      String deskripsi = deskripsiController.text;
+      bool jenis = jenisController;
+
+      if (nama == '' ||
+          tanggal == '' ||
+          nominal == '' ||
+          kategori == '' ||
+          nama.isEmpty ||
+          tanggal.isEmpty ||
+          nominal.isEmpty ||
+          kategori.isEmpty) {
         throw ("Please fill requied field");
       }
-      CollectionReference transaksiCollection =
-          _firestore.collection('transaksi');
-      // Parse the string to DateTime
+
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
-      // Convert DateTime to Firestore Timestamp
+      // Parse DateTime to Timestamp
       Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      String url = await uploadImage();
+      CollectionReference transaksiCollection =
+          _firestore.collection('transaksi');
 
-      await transaksiCollection.doc(widget.transaksiDocId).update({
-        'nama': namaController.text,
+      String url = transaksi.gambar;
+      if (file != null) {
+        url = await uploadImage(file, transaksi.gambar);
+      }
+
+      await transaksiCollection.doc(transaksi.docId).update({
+        'nama': nama,
         'tanggal': timestamp,
-        'nominal': int.parse(nominalController.text),
-        'jenis': jenisController,
-        'kategori': kategoriController,
-        'deskripsi': deskripsiController.text,
+        'nominal': int.parse(nominal),
+        'jenis': jenis,
+        'kategori': kategori,
+        'deskripsi': deskripsi,
         'gambar': url,
-        'uid': _auth.currentUser!.uid,
-        // ignore: invalid_return_type_for_catch_error
+        'uid': _auth.currentUser!.uid, // sebenarnya tidak perlu diupdat  e
+        'docId': transaksi.docId, // sebenarnya tidak perlu diupdate
       });
-      updateSaldo();
-      Navigator.pop(context);
+
+      // jika nominal diubah maka saldo juga akan berubah
+      // perubahannya adalah selisih antara nominal baru dan nominal lama
+      int change = int.parse(nominal) - transaksi.nominal;
+
+      updateSaldo(jenis: jenis, nominal: change, akun: akun);
+
+      Navigator.popAndPushNamed(context, '/home');
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  Future<String> uploadImage() async {
+  Future<void> updateSaldo({
+    required bool jenis,
+    required int nominal,
+    required Akun akun,
+  }) async {
+    final docRef = await _firestore.collection('akun').doc(akun.docId);
+
+    int saldo = nominal;
+
+    if (!jenis) {
+      saldo *= -1;
+    }
+    docRef.update({'saldo': FieldValue.increment(saldo)});
+  }
+
+  Future<String> uploadImage(XFile? file, String url) async {
+    // Jika file kosong maka tidak perlu upload
     if (file == null) return '';
 
-    deleteOldImage();
+    //jika url tidak kosong maka hapus gambar lama
+    if (url != '') {
+      try {
+        await _storage.refFromURL(url).delete();
+      } catch (e) {
+        return '';
+      }
+    }
 
     String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -95,7 +140,7 @@ class _UpdatePageState extends State<UpdatePage> {
     Reference storedDir = dirUpload.child(uniqueFilename);
 
     try {
-      await storedDir.putFile(File(file!.path));
+      await storedDir.putFile(File(file.path));
 
       return await storedDir.getDownloadURL();
     } catch (e) {
@@ -103,249 +148,243 @@ class _UpdatePageState extends State<UpdatePage> {
     }
   }
 
-  Future<void> deleteOldImage() async {
-    if (widget.transaksi.gambar != '') {
-      await _storage.refFromURL(widget.transaksi.gambar).delete();
-    }
-  }
-
-  Future<void> updateSaldo() {
-    var ref = _firestore.collection('akun').doc(widget.akunDocId);
-
-    int saldo = int.parse(nominalController.text) - widget.transaksi.nominal;
-
-    if (!jenisController) {
-      saldo *= -1;
-    }
-    return ref.update({'saldo': FieldValue.increment(saldo)});
-  }
-
-  void setValue() async {
-    setState(() {
-      namaController.text = widget.transaksi.nama;
-      tanggalController.text = dateFormat.format(widget.transaksi.tanggal);
-      nominalController.text = widget.transaksi.nominal.toString();
-      jenisController = widget.transaksi.jenis;
-      kategoriController = widget.transaksi.kategori;
-      deskripsiController.text = widget.transaksi.deskripsi;
-    });
-  }
-
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    setValue();
   }
 
   @override
   Widget build(BuildContext context) {
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final Transaksi transaksi = arguments['transaksi'];
+    final Akun akun = arguments['akun'];
+
+    setState(() {
+      namaController.text = transaksi.nama;
+      tanggalController.text = dateFormat.format(transaksi.tanggal);
+      nominalController.text = transaksi.nominal.toString();
+      jenisController = transaksi.jenis;
+      kategoriController = transaksi.kategori;
+      deskripsiController.text = transaksi.deskripsi;
+    });
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
         title: const Text(
           'Edit Transaksi',
           style: titleAppBar,
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-          child: Column(
-            children: [
-              const Text(
-                'Update Transaksi',
-                style: textBold,
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-              Column(
-                children: [
-                  TextField(
-                    controller: namaController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nama Transaksi',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Update Transaksi',
+                      style: textBold,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  DateTimePicker(
-                    type: DateTimePickerType.dateTime,
-                    dateMask: 'MMMM dd, yyyy hh:mm a',
-                    controller: tanggalController,
-                    decoration: const InputDecoration(
-                      hintText: 'Tanggal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.calendar_today),
+                    const SizedBox(
+                      height: 30,
                     ),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime.now(),
-                  ),
+                    Column(
+                      children: [
+                        TextField(
+                          controller: namaController,
+                          decoration: const InputDecoration(
+                            hintText: 'Nama Transaksi',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        DateTimePicker(
+                          type: DateTimePickerType.dateTime,
+                          dateMask: 'MMMM dd, yyyy hh:mm a',
+                          controller: tanggalController,
+                          decoration: const InputDecoration(
+                            hintText: 'Tanggal',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            suffixIcon: Icon(Icons.calendar_today),
+                          ),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        ),
 
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: nominalController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Nominal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.attach_money),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  //dropdown katagori
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Jenis',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: true,
-                        child: Text('Pemasukan', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: false,
-                        child: Text('Pengeluaran', style: textRegular),
-                      )
-                    ],
-                    value: jenisController,
-                    onChanged: (value) =>
-                        setState(() => jenisController = value as bool),
-                  ),
-                  SizedBox(height: 20),
-                  //dropdown katagori
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Kategori',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "Transfer Keluar",
-                        child: Text('Transfer Keluar', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Transfer Masuk",
-                        child: Text('Transfer Masuk', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tiket",
-                        child: Text('Tiket', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "TopUp",
-                        child: Text('TopUp', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tagihan",
-                        child: Text('Tagihan', style: textRegular),
-                      ),
-                    ],
-                    value: kategoriController,
-                    onChanged: (value) =>
-                        setState(() => kategoriController = value as String),
-                  ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: nominalController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Nominal',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            suffixIcon: Icon(Icons.attach_money),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        //dropdown katagori
+                        DropdownButtonFormField(
+                          decoration: const InputDecoration(
+                            hintText: 'Jenis',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: true,
+                              child: Text('Pemasukan', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: false,
+                              child: Text('Pengeluaran', style: textRegular),
+                            )
+                          ],
+                          value: jenisController,
+                          onChanged: (value) =>
+                              setState(() => jenisController = value as bool),
+                        ),
+                        SizedBox(height: 20),
+                        // dropdown katagori
+                        DropdownButtonFormField(
+                          decoration: const InputDecoration(
+                            hintText: 'Kategori',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "Transfer Keluar",
+                              child:
+                                  Text('Transfer Keluar', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Transfer Masuk",
+                              child: Text('Transfer Masuk', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Tiket",
+                              child: Text('Tiket', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "TopUp",
+                              child: Text('TopUp', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Tagihan",
+                              child: Text('Tagihan', style: textRegular),
+                            ),
+                          ],
+                          value: kategoriController,
+                          onChanged: (value) => setState(
+                              () => kategoriController = value as String),
+                        ),
 
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: deskripsiController,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      hintText: 'Deskripsi',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  //masukkan file
-                  Container(
-                    child: DottedBorder(
-                      dashPattern: [6, 3, 0, 3],
-                      borderType: BorderType.RRect,
-                      radius: Radius.circular(10),
-                      color: Colors.black54,
-                      child: Row(
-                        children: [
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              SizedBox(height: 20),
-                              imagePreview(),
-                              Container(
-                                margin: EdgeInsets.all(20),
-                                width: 100,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: const Color.fromRGBO(0, 150, 199, 1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: TextButton(
-                                  onPressed: () {
-                                    uploadDialog(context);
-                                  },
-                                  child: Text('Choose Image',
-                                      style: TextStyle(
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: deskripsiController,
+                          maxLines: 5,
+                          decoration: const InputDecoration(
+                            hintText: 'Deskripsi',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        //masukkan file
+                        Container(
+                          width: double.infinity,
+                          child: DottedBorder(
+                            dashPattern: [6, 3, 0, 3],
+                            borderType: BorderType.RRect,
+                            radius: Radius.circular(10),
+                            color: Colors.black54,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  SizedBox(height: 20),
+                                  imagePreview(transaksi.gambar),
+                                  Container(
+                                    margin: EdgeInsets.all(20),
+                                    width: 100,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          const Color.fromRGBO(0, 150, 199, 1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: TextButton(
+                                      onPressed: () {
+                                        uploadDialog(context);
+                                      },
+                                      child: const Text(
+                                        'Choose Image',
+                                        style: TextStyle(
                                           fontFamily: famSemi,
                                           color: Colors.white,
-                                          fontSize: 10)),
-                                ),
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 50),
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color.fromRGBO(0, 150, 199, 1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              updateTransaksi(transaksi, akun);
+                            },
+                            child: Text('Edit Transaksi', style: textButton),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                  Container(
-                    width: double.infinity,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color.fromRGBO(0, 150, 199, 1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: TextButton(
-                      onPressed: () {
-                        updateTransaksi();
-                      },
-                      child: Text('Edit Transaksi', style: textButton),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
-  Image imagePreview() {
+  Image imagePreview(String url) {
     if (file != null) {
       return Image.file(File(file!.path), width: 320, height: 180);
     } else {
-      if (widget.transaksi.gambar != '') {
-        return Image.network(widget.transaksi.gambar, width: 320, height: 180);
+      if (url != '') {
+        return Image.network(url, width: 320, height: 180);
       }
       return Image.asset('assets/image.png', width: 320, height: 180);
     }

@@ -1,6 +1,4 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/view/home_view.dart';
-import 'package:catatan_keuangan/view/register_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
@@ -16,6 +14,7 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _auth = FirebaseAuth.instance;
+
   bool _isLoading = false;
 
   bool passwordVisible = false;
@@ -23,15 +22,8 @@ class _LoginViewState extends State<LoginView> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void initState() {
-    super.initState();
-    passwordVisible = true;
-  }
-
   void toRegister() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return RegisterView();
-    }));
+    Navigator.pushNamed(context, '/register');
   }
 
   void login() async {
@@ -40,21 +32,19 @@ class _LoginViewState extends State<LoginView> {
     });
 
     try {
-      final navigator = Navigator.of(context);
-      final email = _emailController.text;
-      final password = _passwordController.text;
+      String email = _emailController.text;
+      String password = _passwordController.text;
+
       if (email.isEmpty || password.isEmpty) {
         throw ("Please fill all fields");
-      } else {
-        await _auth.signInWithEmailAndPassword(
-            email: email, password: password);
-
-        navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) {
-            return HomeView();
-          }),
-        );
       }
+
+      await _auth
+          .signInWithEmailAndPassword(email: email, password: password)
+          .catchError((e) {
+        throw e;
+      });
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
@@ -63,6 +53,12 @@ class _LoginViewState extends State<LoginView> {
         _isLoading = false;
       });
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    passwordVisible = true;
   }
 
   @override
@@ -116,8 +112,10 @@ class _LoginViewState extends State<LoginView> {
                                   }),
                               SizedBox(height: 30),
                               ButtonAuth(
+                                  onPressed: () {
+                                    login();
+                                  },
                                   label: "LOGIN",
-                                  onPressed: login,
                                   fgColor: Colors.white,
                                   bgColor: headerColor),
                               const Divider(

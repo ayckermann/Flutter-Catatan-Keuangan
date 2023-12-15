@@ -1,7 +1,8 @@
 import 'dart:io';
-
+import 'package:catatan_keuangan/model/akun.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -10,8 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class TambahPage extends StatefulWidget {
-  final String akunDocId;
-  const TambahPage({super.key, required this.akunDocId});
+  const TambahPage({super.key});
 
   @override
   State<TambahPage> createState() => _TambahPageState();
@@ -21,6 +21,8 @@ class _TambahPageState extends State<TambahPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
+
+  bool _isLoading = false;
 
   TextEditingController namaController = TextEditingController();
   TextEditingController tanggalController = TextEditingController();
@@ -32,50 +34,85 @@ class _TambahPageState extends State<TambahPage> {
   ImagePicker picker = ImagePicker();
   XFile? file;
 
-  Future<void> addTransaksi() async {
+  Future<void> addTransaksi(Akun akun) async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
-      if (namaController.text.isEmpty ||
-          namaController.text == "" ||
-          tanggalController.text.isEmpty ||
-          tanggalController.text == "" ||
-          nominalController.text.isEmpty ||
-          nominalController.text == "" ||
-          kategoriController.isEmpty ||
-          kategoriController == "") {
+      String nama = namaController.text;
+      String tanggal = tanggalController.text;
+      String nominal = nominalController.text;
+      String kategori = kategoriController;
+      String deskripsi = deskripsiController.text;
+      bool jenis = jenisController;
+
+      if (nama == '' ||
+          tanggal == '' ||
+          nominal == '' ||
+          kategori == '' ||
+          nama.isEmpty ||
+          tanggal.isEmpty ||
+          nominal.isEmpty ||
+          kategori.isEmpty) {
         throw ("Please fill requied field");
       }
-
-      CollectionReference transaksiCollection =
-          _firestore.collection('transaksi');
-
       // Parse the string to DateTime
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
-      // Convert DateTime to Firestore Timestamp
+      // Parse DateTime to Timestamp
       Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      String url = await uploadImage();
+      CollectionReference transaksiCollection =
+          _firestore.collection('transaksi');
 
-      await transaksiCollection.add({
-        'nama': namaController.text,
+      String url = await uploadImage(file);
+
+      final id = transaksiCollection.doc().id;
+
+      await transaksiCollection.doc(id).set({
+        'nama': nama,
         'tanggal': timestamp,
-        'nominal': int.parse(nominalController.text),
-        'jenis': jenisController,
-        'kategori': kategoriController,
-        'deskripsi': deskripsiController.text,
+        'nominal': int.parse(nominal),
+        'jenis': jenis,
+        'kategori': kategori,
+        'deskripsi': deskripsi,
         'gambar': url,
         'uid': _auth.currentUser!.uid,
+        'docId': id,
+      }).catchError((e) {
+        throw e;
       });
-      updateSaldo();
-      Navigator.pop(context);
+
+      updateSaldo(jenis: jenis, nominal: int.parse(nominal), akun: akun);
+
+      Navigator.pop(context, '/home');
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  Future<String> uploadImage() async {
+  Future<void> updateSaldo({
+    required bool jenis,
+    required int nominal,
+    required Akun akun,
+  }) async {
+    final docRef = await _firestore.collection('akun').doc(akun.docId);
+
+    int saldo = nominal;
+
+    if (!jenis) {
+      saldo *= -1;
+    }
+    docRef.update({'saldo': FieldValue.increment(saldo)});
+  }
+
+  Future<String> uploadImage(XFile? file) async {
     if (file == null) return '';
 
     String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
@@ -85,7 +122,7 @@ class _TambahPageState extends State<TambahPage> {
     Reference storedDir = dirUpload.child(uniqueFilename);
 
     try {
-      await storedDir.putFile(File(file!.path));
+      await storedDir.putFile(File(file.path));
 
       return await storedDir.getDownloadURL();
     } catch (e) {
@@ -93,202 +130,221 @@ class _TambahPageState extends State<TambahPage> {
     }
   }
 
-  Future<void> updateSaldo() {
-    var ref = _firestore.collection('akun').doc(widget.akunDocId);
-
-    int saldo = int.parse(nominalController.text);
-    if (!jenisController) {
-      saldo *= -1;
-    }
-    return ref.update({'saldo': FieldValue.increment(saldo)});
-  }
-
   @override
   Widget build(BuildContext context) {
+    final arguments =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+    final Akun akun = arguments['akun'];
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
         title: const Text(
           'Tambah Transaksi',
           style: titleAppBar,
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-          child: Column(
-            children: [
-              const Text(
-                'Transaksi Baru',
-                style: textBold,
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-              Column(
-                children: [
-                  TextField(
-                    controller: namaController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nama Transaksi',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Transaksi Baru',
+                      style: textBold,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  DateTimePicker(
-                    type: DateTimePickerType.dateTime,
-                    dateMask: 'MMMM dd, yyyy hh:mm a',
-                    controller: tanggalController,
-                    decoration: const InputDecoration(
-                      hintText: 'Tanggal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.calendar_today),
+                    const SizedBox(
+                      height: 30,
                     ),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime.now(),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: nominalController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Nominal',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                      suffixIcon: Icon(Icons.attach_money),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Jenis',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: true,
-                        child: Text('Pemasukan', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: false,
-                        child: Text('Pengeluaran', style: textRegular),
-                      )
-                    ],
-                    onChanged: (value) =>
-                        setState(() => jenisController = value as bool),
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Kategori',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "Transfer Keluar",
-                        child: Text('Transfer Keluar', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Transfer Masuk",
-                        child: Text('Transfer Masuk', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tiket",
-                        child: Text('Tiket', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "TopUp",
-                        child: Text('TopUp', style: textRegular),
-                      ),
-                      DropdownMenuItem(
-                        value: "Tagihan",
-                        child: Text('Tagihan', style: textRegular),
-                      ),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => kategoriController = value as String),
-                  ),
-                  SizedBox(height: 20),
+                    Column(
+                      children: [
+                        TextField(
+                          controller: namaController,
+                          decoration: const InputDecoration(
+                            hintText: 'Nama Transaksi',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        DateTimePicker(
+                          type: DateTimePickerType.dateTime,
+                          dateMask: 'MMMM dd, yyyy hh:mm a',
+                          controller: tanggalController,
+                          decoration: const InputDecoration(
+                            hintText: 'Tanggal',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            suffixIcon: Icon(Icons.calendar_today),
+                          ),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: nominalController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Nominal',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                            suffixIcon: Icon(Icons.attach_money),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField(
+                          decoration: const InputDecoration(
+                            hintText: 'Jenis',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: true,
+                              child: Text('Pemasukan', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: false,
+                              child: Text('Pengeluaran', style: textRegular),
+                            )
+                          ],
+                          onChanged: (value) =>
+                              setState(() => jenisController = value as bool),
+                        ),
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField(
+                          decoration: const InputDecoration(
+                            hintText: 'Kategori',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "Transfer Keluar",
+                              child:
+                                  Text('Transfer Keluar', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Transfer Masuk",
+                              child: Text('Transfer Masuk', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Tiket",
+                              child: Text('Tiket', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "TopUp",
+                              child: Text('TopUp', style: textRegular),
+                            ),
+                            DropdownMenuItem(
+                              value: "Tagihan",
+                              child: Text('Tagihan', style: textRegular),
+                            ),
+                          ],
+                          onChanged: (value) => setState(
+                              () => kategoriController = value as String),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: deskripsiController,
+                          maxLines: 5,
+                          decoration: const InputDecoration(
+                            hintText: 'Deskripsi',
+                            hintStyle: textRegular,
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(10))),
+                          ),
+                        ),
 
-                  //masukan file
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      imagePreview(),
-                      IconButton(
-                        onPressed: () {
-                          uploadDialog(context);
-                        },
-                        icon: const Icon(Icons.attach_file),
-                        style: ButtonStyle(
-                          backgroundColor:
-                              MaterialStateProperty.all<Color>(secondaryColor),
-                          foregroundColor:
-                              MaterialStateProperty.all<Color>(Colors.white),
-                          shape:
-                              MaterialStateProperty.all<RoundedRectangleBorder>(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                        SizedBox(height: 20),
+
+                        //masukan file
+                        Container(
+                          width: double.infinity,
+                          child: DottedBorder(
+                            dashPattern: [6, 3, 0, 3],
+                            borderType: BorderType.RRect,
+                            radius: Radius.circular(10),
+                            color: Colors.black54,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  SizedBox(height: 20),
+                                  imagePreview(),
+                                  Container(
+                                    margin: EdgeInsets.all(20),
+                                    width: 100,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          const Color.fromRGBO(0, 150, 199, 1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: TextButton(
+                                      onPressed: () {
+                                        uploadDialog(context);
+                                      },
+                                      child: const Text(
+                                        'Choose Image',
+                                        style: TextStyle(
+                                          fontFamily: famSemi,
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: deskripsiController,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      hintText: 'Deskripsi',
-                      hintStyle: textRegular,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10))),
+
+                        const SizedBox(height: 50),
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: secondaryColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: TextButton(
+                            onPressed: () {
+                              addTransaksi(akun);
+                            },
+                            child: Text('Tambah Transaksi', style: textButton),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                  Container(
-                    width: double.infinity,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: secondaryColor,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: TextButton(
-                      onPressed: () {
-                        addTransaksi();
-                      },
-                      child: Text('Tambah Transaksi', style: textButton),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
   Image imagePreview() {
     if (file == null) {
-      return Image.asset('assets/no-picture.jpg', width: 200, height: 200);
+      return Image.asset('assets/image.png', width: 200, height: 200);
     } else {
       return Image.file(File(file!.path), width: 200, height: 200);
     }

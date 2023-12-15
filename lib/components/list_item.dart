@@ -1,24 +1,21 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
+import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
-import 'package:catatan_keuangan/view/home_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+
 import 'package:flutter/material.dart';
-import 'package:catatan_keuangan/view/detail_view.dart';
 import '../tools/styles.dart';
-import 'package:catatan_keuangan/view/update_view.dart';
 
 class ListItem extends StatefulWidget {
   final Transaksi transaksi;
-  final String transaksiDocId;
-  final String akunDocId;
+  final Akun akun;
 
-  const ListItem({
+  ListItem({
     super.key,
     required this.transaksi,
-    required this.transaksiDocId,
-    required this.akunDocId,
+    required this.akun,
   });
 
   @override
@@ -29,16 +26,18 @@ class _ListItemState extends State<ListItem> {
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  Future<void> delete() async {
+  void delete() async {
     try {
       await _firestore
           .collection("transaksi")
-          .doc(widget.transaksiDocId)
+          .doc(widget.transaksi.docId)
           .delete();
 
       if (widget.transaksi.gambar != '') {
         await _storage.refFromURL(widget.transaksi.gambar).delete();
       }
+
+      Navigator.pop(context);
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
@@ -85,16 +84,10 @@ class _ListItemState extends State<ListItem> {
             ),
           ),
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DetailPage(
-                  transaksi: widget.transaksi,
-                  transaksiDocId: widget.transaksiDocId,
-                  akunDocId: widget.akunDocId,
-                ),
-              ),
-            );
+            Navigator.pushNamed(context, '/detail', arguments: {
+              'transaksi': widget.transaksi,
+              'akun': widget.akun,
+            });
           },
           onLongPress: () {
             showDialog(
@@ -106,32 +99,19 @@ class _ListItemState extends State<ListItem> {
                       TextButton(
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
-                          Navigator.pushReplacement(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: ((context) => UpdatePage(
-                                    transaksi: widget.transaksi,
-                                    akunDocId: widget.akunDocId,
-                                    transaksiDocId: widget.transaksiDocId,
-                                  )),
-                            ),
-                          ).then(
-                            (value) => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => HomeView(),
-                              ),
-                            ),
+                            '/update',
+                            arguments: {
+                              'transaksi': widget.transaksi,
+                              'akun': widget.akun,
+                            },
                           );
                         },
                         child: Text('Edit'),
                       ),
                       TextButton(
-                        onPressed: () {
-                          delete();
-
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: delete,
                         child: Text('Hapus'),
                       ),
                     ],
