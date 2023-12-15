@@ -26,7 +26,7 @@ class _ListItemState extends State<ListItem> {
   final _firestore = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  void delete() async {
+  void delete(BuildContext buildContext) async {
     try {
       await _firestore
           .collection("transaksi")
@@ -36,8 +36,7 @@ class _ListItemState extends State<ListItem> {
       if (widget.transaksi.gambar != '') {
         await _storage.refFromURL(widget.transaksi.gambar).delete();
       }
-
-      Navigator.pop(context);
+      Navigator.pop(buildContext);
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
@@ -92,15 +91,15 @@ class _ListItemState extends State<ListItem> {
           onLongPress: () {
             showDialog(
                 context: context,
-                builder: (BuildContext) {
+                builder: (buildContext) {
                   return AlertDialog(
                     title: Text('Pilih Aksi'),
                     actions: [
                       TextButton(
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
-                          Navigator.pushNamed(
-                            context,
+                          Navigator.popAndPushNamed(
+                            buildContext,
                             '/update',
                             arguments: {
                               'transaksi': widget.transaksi,
@@ -111,7 +110,9 @@ class _ListItemState extends State<ListItem> {
                         child: Text('Edit'),
                       ),
                       TextButton(
-                        onPressed: delete,
+                        onPressed: () {
+                          delete(buildContext);
+                        },
                         child: Text('Hapus'),
                       ),
                     ],
