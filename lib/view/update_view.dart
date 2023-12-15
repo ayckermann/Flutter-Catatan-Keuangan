@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
-import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_picker/date_time_picker.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,7 +23,10 @@ class UpdatePage extends StatefulWidget {
 }
 
 class _UpdatePageState extends State<UpdatePage> {
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
+
   bool _isLoading = false;
 
   TextEditingController namaController = TextEditingController();
@@ -39,38 +44,57 @@ class _UpdatePageState extends State<UpdatePage> {
       _isLoading = true;
     });
     try {
-      if (namaController.text.isEmpty ||
-          namaController.text == "" ||
-          tanggalController.text.isEmpty ||
-          tanggalController.text == "" ||
-          nominalController.text.isEmpty ||
-          nominalController.text == "" ||
-          kategoriController.isEmpty ||
-          kategoriController == "") {
+      String nama = namaController.text;
+      String tanggal = tanggalController.text;
+      String nominal = nominalController.text;
+      String kategori = kategoriController;
+      String deskripsi = deskripsiController.text;
+      bool jenis = jenisController;
+
+      if (nama == '' ||
+          tanggal == '' ||
+          nominal == '' ||
+          kategori == '' ||
+          nama.isEmpty ||
+          tanggal.isEmpty ||
+          nominal.isEmpty ||
+          kategori.isEmpty) {
         throw ("Please fill requied field");
       }
 
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
-      Transaksi editTransaksi = Transaksi(
-        nama: namaController.text,
-        tanggal: parsedDateTime,
-        nominal: int.parse(nominalController.text),
-        jenis: jenisController,
-        kategori: kategoriController,
-        deskripsi: deskripsiController.text,
-        gambar: transaksi.gambar,
-        docId: transaksi.docId,
-      );
+      // Parse DateTime to Timestamp
+      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      final respond = await _firebaseHelper.updateTransaksi(
-          editTransaksi, akun, file, transaksi.nominal);
-      if (respond == 'success') {
-        Navigator.popAndPushNamed(context, '/home');
-      } else {
-        throw respond;
+      CollectionReference transaksiCollection =
+          _firestore.collection('transaksi');
+
+      String url = transaksi.gambar;
+      if (file != null) {
+        url = await uploadImage(file, transaksi.gambar);
       }
+
+      await transaksiCollection.doc(transaksi.docId).update({
+        'nama': nama,
+        'tanggal': timestamp,
+        'nominal': int.parse(nominal),
+        'jenis': jenis,
+        'kategori': kategori,
+        'deskripsi': deskripsi,
+        'gambar': url,
+        'uid': _auth.currentUser!.uid, // sebenarnya tidak perlu diupdat  e
+        'docId': transaksi.docId, // sebenarnya tidak perlu diupdate
+      });
+
+      // jika nominal diubah maka saldo juga akan berubah
+      // perubahannya adalah selisih antara nominal baru dan nominal lama
+      int change = int.parse(nominal) - transaksi.nominal;
+
+      updateSaldo(jenis: jenis, nominal: change, akun: akun);
+
+      Navigator.popAndPushNamed(context, '/home');
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
@@ -78,6 +102,49 @@ class _UpdatePageState extends State<UpdatePage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> updateSaldo({
+    required bool jenis,
+    required int nominal,
+    required Akun akun,
+  }) async {
+    final docRef = await _firestore.collection('akun').doc(akun.docId);
+
+    int saldo = nominal;
+
+    if (!jenis) {
+      saldo *= -1;
+    }
+    docRef.update({'saldo': FieldValue.increment(saldo)});
+  }
+
+  Future<String> uploadImage(XFile? file, String url) async {
+    // Jika file kosong maka tidak perlu upload
+    if (file == null) return '';
+
+    //jika url tidak kosong maka hapus gambar lama
+    if (url != '') {
+      try {
+        await _storage.refFromURL(url).delete();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
+
+    Reference dirUpload =
+        _storage.ref().child('upload/${_auth.currentUser!.uid}');
+    Reference storedDir = dirUpload.child(uniqueFilename);
+
+    try {
+      await storedDir.putFile(File(file.path));
+
+      return await storedDir.getDownloadURL();
+    } catch (e) {
+      return '';
     }
   }
 
@@ -107,12 +174,6 @@ class _UpdatePageState extends State<UpdatePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.popAndPushNamed(context, '/home');
-          },
-        ),
         title: const Text(
           'Edit Transaksi',
           style: titleAppBar,

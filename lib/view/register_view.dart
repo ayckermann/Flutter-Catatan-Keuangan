@@ -1,5 +1,6 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/tools/firebase_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
 
@@ -13,7 +14,8 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView> {
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
 
@@ -42,10 +44,15 @@ class _RegisterViewState extends State<RegisterView> {
     });
 
     try {
-      if (nameController.text.isEmpty ||
-          emailController.text.isEmpty ||
-          passwordController.text.isEmpty ||
-          confirmPasswordController.text.isEmpty) {
+      String nama = nameController.text;
+      String email = emailController.text;
+      String password = passwordController.text;
+      String confirmPassword = confirmPasswordController.text;
+
+      if (nama.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty ||
+          confirmPassword.isEmpty) {
         throw ("Please fill all fields");
       } else {
         if (passwordController.text != confirmPasswordController.text) {
@@ -54,16 +61,27 @@ class _RegisterViewState extends State<RegisterView> {
           throw ("Password must be at least 6 characters");
         }
 
-        String respond = await _firebaseHelper.register(
-          nama: nameController.text,
-          email: emailController.text,
-          password: passwordController.text,
-          confirmPassword: confirmPasswordController.text,
-        );
+        CollectionReference akunCollection = _firestore.collection('akun');
 
-        if (respond == 'success') {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
+        await _auth
+            .createUserWithEmailAndPassword(email: email, password: password)
+            .catchError((e) {
+          throw (e);
+        });
+
+        final id = akunCollection.doc().id;
+
+        await akunCollection.doc(id).set({
+          'uid': _auth.currentUser!.uid,
+          'nama': nama,
+          'email': email,
+          'saldo': 0,
+          'docId': id,
+        }).catchError((e) {
+          throw (e);
+        });
+
+        Navigator.pushReplacementNamed(context, '/login');
       }
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));

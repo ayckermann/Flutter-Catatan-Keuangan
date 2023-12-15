@@ -1,8 +1,9 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
-import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
@@ -17,15 +18,20 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
 
   void delete(Transaksi transaksi) async {
-    final respond = await _firebaseHelper.deleteTransaksi(transaksi);
+    try {
+      await _firestore.collection("transaksi").doc(transaksi.docId).delete();
 
-    if (respond == 'success') {
-      Navigator.popAndPushNamed(context, '/home');
-    } else {
-      final snackbar = SnackBar(content: Text(respond));
+      if (transaksi.gambar != '') {
+        await _storage.refFromURL(transaksi.gambar).delete();
+      }
+
+      Navigator.pop(context);
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
   }
@@ -40,15 +46,10 @@ class _DetailPageState extends State<DetailPage> {
 
     return Scaffold(
         appBar: AppBar(
-            title: const Text('Detail Transaksi', style: titleAppBar),
-            centerTitle: true,
-            backgroundColor: headerColor,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                Navigator.popAndPushNamed(context, '/home');
-              },
-            )),
+          title: const Text('Detail Transaksi', style: titleAppBar),
+          centerTitle: true,
+          backgroundColor: headerColor,
+        ),
         body: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

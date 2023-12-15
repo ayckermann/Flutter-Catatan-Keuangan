@@ -1,6 +1,5 @@
 import 'package:catatan_keuangan/components/input_components.dart';
-import 'package:catatan_keuangan/tools/firebase_helper.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 
@@ -14,7 +13,7 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final _auth = FirebaseAuth.instance;
 
   bool _isLoading = false;
 
@@ -22,11 +21,6 @@ class _LoginViewState extends State<LoginView> {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  void initState() {
-    super.initState();
-    passwordVisible = true;
-  }
 
   void toRegister() {
     Navigator.pushNamed(context, '/register');
@@ -38,19 +32,19 @@ class _LoginViewState extends State<LoginView> {
     });
 
     try {
-      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      String email = _emailController.text;
+      String password = _passwordController.text;
+
+      if (email.isEmpty || password.isEmpty) {
         throw ("Please fill all fields");
       }
-      String respond = await _firebaseHelper.login(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
 
-      if (respond == 'success') {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        throw respond;
-      }
+      await _auth
+          .signInWithEmailAndPassword(email: email, password: password)
+          .catchError((e) {
+        throw e;
+      });
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
@@ -59,6 +53,12 @@ class _LoginViewState extends State<LoginView> {
         _isLoading = false;
       });
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    passwordVisible = true;
   }
 
   @override

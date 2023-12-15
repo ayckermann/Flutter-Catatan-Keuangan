@@ -1,10 +1,10 @@
 import 'dart:io';
-
 import 'package:catatan_keuangan/model/akun.dart';
-import 'package:catatan_keuangan/model/transaksi.dart';
-import 'package:catatan_keuangan/tools/firebase_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_time_picker/date_time_picker.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:catatan_keuangan/tools/styles.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,7 +18,9 @@ class TambahPage extends StatefulWidget {
 }
 
 class _TambahPageState extends State<TambahPage> {
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
 
   bool _isLoading = false;
 
@@ -37,36 +39,54 @@ class _TambahPageState extends State<TambahPage> {
       _isLoading = true;
     });
     try {
-      if (namaController.text.isEmpty ||
-          namaController.text == "" ||
-          tanggalController.text.isEmpty ||
-          tanggalController.text == "" ||
-          nominalController.text.isEmpty ||
-          nominalController.text == "" ||
-          kategoriController.isEmpty ||
-          kategoriController == "") {
+      String nama = namaController.text;
+      String tanggal = tanggalController.text;
+      String nominal = nominalController.text;
+      String kategori = kategoriController;
+      String deskripsi = deskripsiController.text;
+      bool jenis = jenisController;
+
+      if (nama == '' ||
+          tanggal == '' ||
+          nominal == '' ||
+          kategori == '' ||
+          nama.isEmpty ||
+          tanggal.isEmpty ||
+          nominal.isEmpty ||
+          kategori.isEmpty) {
         throw ("Please fill requied field");
       }
       // Parse the string to DateTime
       DateTime parsedDateTime =
           DateFormat('yyyy-MM-DD hh:mm').parse(tanggalController.text);
 
-      Transaksi transaksi = Transaksi(
-        nama: namaController.text,
-        tanggal: parsedDateTime,
-        nominal: int.parse(nominalController.text),
-        jenis: jenisController,
-        kategori: kategoriController,
-        deskripsi: deskripsiController.text,
-        gambar: '',
-      );
+      // Parse DateTime to Timestamp
+      Timestamp timestamp = Timestamp.fromDate(parsedDateTime);
 
-      final respond = await _firebaseHelper.addTransaksi(transaksi, akun, file);
-      if (respond == 'success') {
-        Navigator.popAndPushNamed(context, '/home');
-      } else {
-        throw respond;
-      }
+      CollectionReference transaksiCollection =
+          _firestore.collection('transaksi');
+
+      String url = await uploadImage(file);
+
+      final id = transaksiCollection.doc().id;
+
+      await transaksiCollection.doc(id).set({
+        'nama': nama,
+        'tanggal': timestamp,
+        'nominal': int.parse(nominal),
+        'jenis': jenis,
+        'kategori': kategori,
+        'deskripsi': deskripsi,
+        'gambar': url,
+        'uid': _auth.currentUser!.uid,
+        'docId': id,
+      }).catchError((e) {
+        throw e;
+      });
+
+      updateSaldo(jenis: jenis, nominal: int.parse(nominal), akun: akun);
+
+      Navigator.pop(context, '/home');
     } catch (e) {
       final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
@@ -74,6 +94,39 @@ class _TambahPageState extends State<TambahPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> updateSaldo({
+    required bool jenis,
+    required int nominal,
+    required Akun akun,
+  }) async {
+    final docRef = await _firestore.collection('akun').doc(akun.docId);
+
+    int saldo = nominal;
+
+    if (!jenis) {
+      saldo *= -1;
+    }
+    docRef.update({'saldo': FieldValue.increment(saldo)});
+  }
+
+  Future<String> uploadImage(XFile? file) async {
+    if (file == null) return '';
+
+    String uniqueFilename = DateTime.now().millisecondsSinceEpoch.toString();
+
+    Reference dirUpload =
+        _storage.ref().child('upload/${_auth.currentUser!.uid}');
+    Reference storedDir = dirUpload.child(uniqueFilename);
+
+    try {
+      await storedDir.putFile(File(file.path));
+
+      return await storedDir.getDownloadURL();
+    } catch (e) {
+      return '';
     }
   }
 
@@ -87,12 +140,6 @@ class _TambahPageState extends State<TambahPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: headerColor,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.popAndPushNamed(context, '/home');
-          },
-        ),
         title: const Text(
           'Tambah Transaksi',
           style: titleAppBar,

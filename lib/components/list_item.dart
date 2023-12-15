@@ -1,8 +1,9 @@
 import 'package:catatan_keuangan/components/kategori_icon.dart';
 import 'package:catatan_keuangan/model/akun.dart';
 import 'package:catatan_keuangan/model/transaksi.dart';
-import 'package:catatan_keuangan/tools/firebase_helper.dart';
 import 'package:catatan_keuangan/tools/formater.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:flutter/material.dart';
 import '../tools/styles.dart';
@@ -22,15 +23,23 @@ class ListItem extends StatefulWidget {
 }
 
 class _ListItemState extends State<ListItem> {
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final _firestore = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
 
   void delete() async {
-    final respond = await _firebaseHelper.deleteTransaksi(widget.transaksi);
+    try {
+      await _firestore
+          .collection("transaksi")
+          .doc(widget.transaksi.docId)
+          .delete();
 
-    if (respond == 'success') {
-      Navigator.popAndPushNamed(context, '/home');
-    } else {
-      final snackbar = SnackBar(content: Text(respond));
+      if (widget.transaksi.gambar != '') {
+        await _storage.refFromURL(widget.transaksi.gambar).delete();
+      }
+
+      Navigator.pop(context);
+    } catch (e) {
+      final snackbar = SnackBar(content: Text(e.toString()));
       ScaffoldMessenger.of(context).showSnackBar(snackbar);
     }
   }
@@ -75,7 +84,7 @@ class _ListItemState extends State<ListItem> {
             ),
           ),
           onTap: () {
-            Navigator.popAndPushNamed(context, '/detail', arguments: {
+            Navigator.pushNamed(context, '/detail', arguments: {
               'transaksi': widget.transaksi,
               'akun': widget.akun,
             });
@@ -90,7 +99,7 @@ class _ListItemState extends State<ListItem> {
                       TextButton(
                         onPressed: () {
                           // Tambahkan kode untuk mengedit transaksi di sini
-                          Navigator.popAndPushNamed(
+                          Navigator.pushNamed(
                             context,
                             '/update',
                             arguments: {
